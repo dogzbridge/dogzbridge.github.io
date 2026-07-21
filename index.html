@@ -1,0 +1,2709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>DOGZ BRIDGE</title>
+    <link rel="icon" href="https://i2c.seadn.io/ethereum/0x495f947276749ce646f68ac8c248420045cb7b5e/c5baafdbaf18d60cb14596e26b8675/19c5baafdbaf18d60cb14596e26b8675.png?w=350" type="image/png" />
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js">
+    </script>
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html,
+        body {
+            width: 100%;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            transition: background 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+        .light {
+            --bg-primary: #f7f8fa;
+            --bg-card: #ffffff;
+            --bg-input: #f0f2f5;
+            --bg-hover: #e8ecf0;
+            --text-primary: #1a1a2e;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --border-color: #e5e7eb;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --accent: #4f46e5;
+            --accent-hover: #4338ca;
+            --accent-light: #eef2ff;
+            --switch-bg: #d1d5db;
+            --switch-dot: #ffffff;
+            --token-bg: #f3f4f6;
+            --error: #ef4444;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --card-border: #e5e7eb;
+            --placeholder: #9ca3af;
+            --input-bg: #f9fafb;
+            --chain-bg: #f3f4f6;
+            --divider: #e5e7eb;
+            --theme-btn-bg: #f0f2f5;
+            --theme-btn-active: #ffffff;
+            --theme-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+        .dark {
+            --bg-primary: #0d0d1a;
+            --bg-card: #1a1a2e;
+            --bg-input: #252540;
+            --bg-hover: #2d2d4a;
+            --text-primary: #f1f1f6;
+            --text-secondary: #a0a0b8;
+            --text-muted: #6b6b85;
+            --border-color: #2d2d4a;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-light: #1e1b4b;
+            --switch-bg: #3d3d5c;
+            --switch-dot: #f1f1f6;
+            --token-bg: #252540;
+            --error: #f87171;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --card-border: #2d2d4a;
+            --placeholder: #6b6b85;
+            --input-bg: #1a1a2e;
+            --chain-bg: #252540;
+            --divider: #2d2d4a;
+            --theme-btn-bg: #2d2d4a;
+            --theme-btn-active: #1a1a2e;
+            --theme-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        /* ===== 顶部栏 ===== */
+        .global-top-bar {
+            width: 100%;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: transparent;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+        .global-top-bar .brand {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-primary);
+            font-family: 'Impact', sans-serif;
+            letter-spacing: 0.5px;
+        }
+        .global-top-bar .brand .logo-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: transparent;
+            border: none;
+            flex-shrink: 0;
+        }
+        .global-top-bar .brand .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .global-top-bar .actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ----- 主题切换 ----- */
+        .theme-toggle-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--theme-btn-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            box-shadow: var(--theme-btn-shadow);
+            flex-shrink: 0;
+        }
+        .theme-toggle-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            transform: scale(1.05);
+        }
+        .theme-toggle-btn:active {
+            transform: scale(0.9);
+        }
+        .theme-toggle-btn svg,
+        .theme-toggle-btn i {
+            pointer-events: none;
+        }
+        .theme-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .theme-toggle-btn svg circle {
+            fill: currentColor;
+        }
+
+        /* ----- 钱包按钮 ----- */
+        .global-top-bar .wallet-btn {
+            background: transparent;
+            color: var(--text-primary);
+            font-weight: 500;
+            padding: 4px 10px 4px 6px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            min-height: 32px;
+        }
+        .global-top-bar .wallet-btn:hover {
+            background: var(--bg-hover);
+        }
+        .global-top-bar .wallet-btn .wallet-icon-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            background: transparent;
+        }
+        .global-top-bar .wallet-btn .wallet-icon-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 50%;
+        }
+        .wallet-btn .wallet-icon-wrap .dot-red {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ef4444;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+        }
+        .wallet-btn .wallet-status-text {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-primary);
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .wallet-btn.connected {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        /* ===== 主内容 ===== */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding-bottom: 20px;
+        }
+        #app {
+            width: 100%;
+            max-width: 480px;
+            margin: 60px auto 0;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: 24px;
+            padding: 20px 16px 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--card-border);
+            transition: background 0.25s ease, border 0.25s ease;
+        }
+        .card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid var(--card-border);
+        }
+        .card-light {
+            background: var(--bg-input);
+            border-radius: 12px;
+            padding: 8px 12px;
+            transition: background 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .amount-input {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            width: 70%;
+            outline: none;
+            padding: 4px 0;
+        }
+        .amount-input::placeholder {
+            color: var(--placeholder);
+            font-weight: 400;
+        }
+        .amount-input::-webkit-outer-spin-button,
+        .amount-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .amount-input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .amount-input-readonly {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            width: 70%;
+            outline: none;
+            padding: 4px 0;
+            cursor: default;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 16px;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-outline:hover {
+            background: var(--bg-hover);
+        }
+
+        .swap-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: -10px auto;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .swap-btn:hover {
+            background: var(--bg-hover);
+            transform: scale(1.05);
+        }
+
+        /* ===== 链选择器 ===== */
+        .chain-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px 6px 6px;
+            border-radius: 14px;
+            background: var(--chain-bg);
+            border: 1px solid transparent;
+            cursor: pointer;
+            flex: 1;
+            min-width: 0;
+        }
+        .chain-selector:hover {
+            border-color: var(--border-color);
+        }
+        .chain-selector .chain-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            overflow: hidden;
+            background: transparent;
+            border: none;
+        }
+        .chain-selector .chain-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .chain-selector .chain-name {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+        }
+        .chain-selector .chain-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        .chain-selector .chain-dropdown-arrow {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        /* ===== 代币图标 ===== */
+        .token-icon-wrapper {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+        }
+        .token-icon-wrapper .main-icon {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            overflow: hidden;
+            background: transparent;
+            border: none;
+        }
+        .token-icon-wrapper .main-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .token-icon-wrapper .chain-badge {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+            background: transparent;
+            border: none;
+        }
+        .token-icon-wrapper .chain-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .token-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .token-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .token-symbol {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ===== 其他 ===== */
+        .address-input {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 14px;
+            color: var(--text-primary);
+            width: 100%;
+            outline: none;
+            transition: border 0.2s ease;
+        }
+        .address-input:focus {
+            border-color: var(--accent);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 8px;
+            z-index: 50;
+            max-height: 280px;
+            overflow-y: auto;
+            display: none;
+        }
+        .dropdown-menu.open {
+            display: block;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            color: var(--text-primary);
+        }
+        .dropdown-item:hover {
+            background: var(--bg-hover);
+        }
+        .dropdown-item .item-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            overflow: hidden;
+            background: transparent;
+            border: none;
+        }
+        .dropdown-item .item-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .dropdown-item .item-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .dropdown-item .item-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        .chain-group {
+            position: relative;
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 14px 24px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--card-border);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 100;
+            max-width: 90%;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .toast.hidden {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+            pointer-events: none;
+        }
+        .toast.error {
+            border-color: var(--error);
+        }
+        .toast.success {
+            border-color: var(--success);
+        }
+        .toast a {
+            color: var(--accent);
+            text-decoration: underline;
+            word-break: break-all;
+            font-weight: 600;
+        }
+        .toast a:hover {
+            color: var(--accent-hover);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.25s ease;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .hidden {
+            display: none !important;
+        }
+
+        /* ===== 底部 ===== */
+        .global-footer {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 20px 20px 30px 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            background: transparent;
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+        .global-footer img {
+            height: 20px;
+            width: auto;
+            display: block;
+        }
+        .global-footer span {
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 480px) {
+            .global-top-bar {
+                padding: 8px 16px;
+            }
+            .global-top-bar .brand {
+                font-size: 13px;
+                gap: 3px;
+            }
+            .global-top-bar .brand .logo-icon {
+                width: 36px;
+                height: 36px;
+            }
+            .theme-toggle-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
+            }
+            .theme-toggle-btn svg {
+                width: 18px;
+                height: 18px;
+            }
+            .global-top-bar .wallet-btn {
+                font-size: 10px;
+                padding: 3px 8px 3px 4px;
+                min-height: 28px;
+                gap: 4px;
+            }
+            .global-top-bar .wallet-btn .wallet-icon-wrap {
+                width: 18px;
+                height: 18px;
+            }
+            .global-top-bar .wallet-btn .wallet-status-text {
+                font-size: 10px;
+                max-width: 70px;
+            }
+            .wallet-btn .wallet-icon-wrap .dot-red {
+                width: 12px;
+                height: 12px;
+            }
+            #app {
+                padding: 16px 12px 20px;
+                /* 手机端卡片上移，距顶部更近 */
+                margin-top: 20px;
+            }
+            .token-icon-wrapper {
+                width: 36px;
+                height: 36px;
+            }
+            .token-icon-wrapper .chain-badge {
+                width: 16px;
+                height: 16px;
+                font-size: 8px;
+                bottom: -3px;
+                right: -3px;
+            }
+            .token-name {
+                font-size: 15px;
+            }
+            .amount-input,
+            .amount-input-readonly {
+                font-size: 18px;
+            }
+            .card-light {
+                padding: 6px 10px;
+            }
+            .chain-selector .chain-icon {
+                width: 24px;
+                height: 24px;
+                font-size: 12px;
+            }
+            .chain-selector .chain-name {
+                white-space: normal;
+                overflow: visible;
+                font-size: 11px;
+                line-height: 1.2;
+                flex: 1 1 auto;
+                min-width: 0;
+                word-break: break-word;
+            }
+            .chain-selector {
+                padding: 4px 6px 4px 4px;
+                gap: 4px;
+            }
+            .chain-selector .chain-label {
+                font-size: 10px;
+            }
+            .chain-selector .chain-dropdown-arrow {
+                font-size: 9px;
+            }
+            .swap-btn {
+                width: 38px;
+                height: 38px;
+                font-size: 16px;
+                margin: -8px auto;
+            }
+            .btn-primary {
+                font-size: 15px;
+                padding: 14px 16px;
+            }
+            .global-footer {
+                padding: 16px 16px 24px 16px;
+                font-size: 12px;
+                gap: 6px;
+            }
+            .global-footer img {
+                height: 16px;
+            }
+            .toast {
+                font-size: 13px;
+                padding: 12px 16px;
+                bottom: 20px;
+            }
+        }
+        @media (max-width: 380px) {
+            .global-top-bar .brand {
+                font-size: 12px;
+            }
+            .global-top-bar .brand .logo-icon {
+                width: 32px;
+                height: 32px;
+            }
+            .theme-toggle-btn {
+                width: 24px;
+                height: 24px;
+                font-size: 12px;
+            }
+            .theme-toggle-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+            .global-top-bar .wallet-btn {
+                font-size: 9px;
+                padding: 2px 6px 2px 3px;
+            }
+            .global-top-bar .wallet-btn .wallet-status-text {
+                max-width: 55px;
+                font-size: 9px;
+            }
+            .global-top-bar .wallet-btn .wallet-icon-wrap {
+                width: 16px;
+                height: 16px;
+            }
+            .wallet-btn .wallet-icon-wrap .dot-red {
+                width: 10px;
+                height: 10px;
+            }
+            .chain-selector .chain-name {
+                font-size: 10px;
+            }
+            .amount-input,
+            .amount-input-readonly {
+                font-size: 16px;
+            }
+            .token-name {
+                font-size: 13px;
+            }
+            #app {
+                margin-top: 16px;
+            }
+            .global-footer {
+                padding: 12px 12px 20px 12px;
+                font-size: 11px;
+            }
+            .global-footer img {
+                height: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== 顶部栏 ===== -->
+    <div class="global-top-bar" id="topBar">
+        <div class="brand">
+            <div class="logo-icon" id="logoIcon">
+                <img id="logoImg" src="https://i.hd-r.cn/090e8189-22b2-42cf-850d-9c8726ed7639.png" alt="DOGZ" />
+            </div>
+            <span>DOGZ BRIDGE</span>
+        </div>
+        <div class="actions">
+            <!-- 主题切换按钮 -->
+            <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="切换主题">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="wallet-btn" id="walletBtn">
+                <span class="wallet-icon-wrap" id="walletIconWrap">
+                    <span class="dot-red" id="walletDot"></span>
+                </span>
+                <span class="wallet-status-text" id="walletStatus">连接钱包</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== 主内容 ===== -->
+    <div class="main-content">
+        <div id="app" class="light">
+            <div class="card mb-3">
+                <div class="chain-group">
+                    <div class="flex items-center justify-between"><span style="font-size:12px;color:var(--text-muted);font-weight:500;">从</span></div>
+                    <div class="flex items-center gap-3 mt-1 relative">
+                        <div class="chain-selector" id="sourceChainSelector">
+                            <div class="chain-icon" id="sourceChainIcon">⟠</div>
+                            <span class="chain-name" id="sourceChainName">Ethereum</span>
+                            <span class="chain-label" id="sourceChainLabel">ETH</span>
+                            <i class="fas fa-chevron-down chain-dropdown-arrow"></i>
+                        </div>
+                        <div class="dropdown-menu" id="sourceDropdown"></div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3">
+                        <div class="token-display">
+                            <div class="token-icon-wrapper" id="sourceTokenWrapper">
+                                <div class="main-icon" id="sourceTokenIcon"><img src="https://etherscan.io/token/images/dogz_32.png" alt="DOGZ" /></div>
+                                <div class="chain-badge" id="sourceTokenBadge">⟠</div>
+                            </div>
+                            <div>
+                                <div class="token-name" id="sourceTokenName">DOGZ</div>
+                                <div class="token-symbol" id="sourceTokenSymbol">Ethereum</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;color:var(--text-muted);">余额</div>
+                            <div style="font-size:14px;font-weight:600;color:var(--text-primary);" id="sourceBalance">0.00</div>
+                        </div>
+                    </div>
+                    <div class="mt-2 card-light">
+                        <input type="number" class="amount-input" id="amountInput" placeholder="0.0" step="any" min="0" />
+                        <button class="btn-outline" id="maxBtn" style="padding:2px 8px;font-size:11px;border-radius:6px;">MAX</button>
+                    </div>
+                </div>
+
+                <div class="flex justify-center my-1"><button class="swap-btn" id="swapBtn"><i class="fas fa-arrows-up-down"></i></button></div>
+
+                <div class="chain-group mt-1">
+                    <div class="flex items-center justify-between"><span style="font-size:12px;color:var(--text-muted);font-weight:500;">到</span></div>
+                    <div class="flex items-center gap-3 mt-1 relative">
+                        <div class="chain-selector" id="targetChainSelector">
+                            <div class="chain-icon" id="targetChainIcon">▲</div>
+                            <span class="chain-name" id="targetChainName">BSC</span>
+                            <span class="chain-label" id="targetChainLabel">BNB</span>
+                            <i class="fas fa-chevron-down chain-dropdown-arrow"></i>
+                        </div>
+                        <div class="dropdown-menu" id="targetDropdown"></div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3">
+                        <div class="token-display">
+                            <div class="token-icon-wrapper" id="targetTokenWrapper">
+                                <div class="main-icon" id="targetTokenIcon"><img src="https://etherscan.io/token/images/dogz_32.png" alt="DOGZ" /></div>
+                                <div class="chain-badge" id="targetTokenBadge">▲</div>
+                            </div>
+                            <div>
+                                <div class="token-name" id="targetTokenName">DOGZ</div>
+                                <div class="token-symbol" id="targetTokenSymbol">BSC</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;"><div style="font-size:11px;color:var(--text-muted);">预计收到</div></div>
+                    </div>
+                    <div class="mt-2 card-light">
+                        <input type="text" class="amount-input-readonly" id="targetEstimateInput" value="—" readonly />
+                        <span style="font-size:12px;color:var(--text-muted);">≈ DOGZ</span>
+                    </div>
+                </div>
+
+                <div id="addressSection" class="mt-3 hidden fade-in">
+                    <div class="flex items-center gap-2">
+                        <span style="font-size:12px;color:var(--text-muted);font-weight:500;">接收地址</span>
+                        <button id="closeAddressBtn" class="btn-outline" style="padding:2px 8px;font-size:11px;border-radius:6px;margin-left:auto;"><i class="fas fa-times"></i></button>
+                    </div>
+                    <input type="text" class="address-input mt-1" id="targetAddressInput" placeholder="输入接收地址" />
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+                </div>
+
+                <div class="flex justify-end mt-2">
+                    <button class="btn-outline" id="toggleAddressBtn" style="padding:4px 12px;font-size:12px;border-radius:8px;"><i class="fas fa-pen"></i> 指定接收地址</button>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="bridgeBtn"><i class="fas fa-arrows-spin"></i> 跨链桥接</button>
+            <div id="toast" class="toast hidden"><span id="toastIcon">✅</span><span id="toastMsg">操作成功</span></div>
+        </div>
+    </div>
+
+    <!-- ===== 底部 ===== -->
+    <div class="global-footer">
+        <span>Powered by</span>
+        <img id="footerLogo" src="https://mintcdn.com/layerzero/MzSiOdXt8xlDlEr4/images/LayerZero_Logo_Black.svg?fit=max&auto=format&n=MzSiOdXt8xlDlEr4&q=85&s=091b05c7556f6e8e948d613c2abf58cb" alt="LayerZero" />
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            if (typeof ethers === 'undefined') {
+                document.body.innerHTML =
+                    `<div style="padding:20px;color:red;text-align:center;font-size:18px;">⚠️ ethers 库加载失败，请检查网络或刷新页面重试。</div>`;
+                return;
+            }
+
+            // ======================= 地址转换 =======================
+            const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+            const BASE58_MAP = {};
+            for (let i = 0; i < ALPHABET.length; i++) { BASE58_MAP[ALPHABET[i]] = i; }
+
+            function isValidBase58(str) {
+                for (let i = 0; i < str.length; i++) { if (!(str[i] in BASE58_MAP)) return false; }
+                return true;
+            }
+
+            function base58Decode(str) {
+                if (!isValidBase58(str)) throw new Error('地址包含非法字符');
+                const bytes = [];
+                for (let i = 0; i < str.length; i++) {
+                    let carry = BASE58_MAP[str[i]];
+                    for (let j = 0; j < bytes.length; j++) {
+                        const val = bytes[j] * 58 + carry;
+                        bytes[j] = val & 0xff;
+                        carry = val >> 8;
+                    }
+                    while (carry) { bytes.push(carry & 0xff);
+                        carry >>= 8; }
+                }
+                for (let i = 0; i < str.length && str[i] === '1'; i++) bytes.unshift(0);
+                return Uint8Array.from(bytes.reverse());
+            }
+
+            function tronToEvm(tronAddress) {
+                if (state && state.tronWeb && typeof state.tronWeb.address.toHex === 'function') {
+                    try {
+                        let hex = state.tronWeb.address.toHex(tronAddress);
+                        if (hex.startsWith('0x')) hex = hex.slice(2);
+                        if (hex.length === 40) return '0x' + hex;
+                        if (hex.length === 42 && hex.startsWith('41')) return '0x' + hex.slice(2);
+                    } catch (e) { /* fallback */ }
+                }
+                if (tronAddress.length !== 34) throw new Error('波场地址长度应为34位');
+                const decoded = base58Decode(tronAddress);
+                if (decoded.length !== 25) throw new Error('解码后长度应为25字节');
+                const data = decoded.slice(0, 21);
+                if (data[0] !== 0x41) throw new Error('无效版本');
+                const pubKey = data.slice(1);
+                let hex = '0x';
+                for (let i = 0; i < pubKey.length; i++) hex += ('0' + pubKey[i].toString(16)).slice(-2);
+                return hex;
+            }
+
+            function normalizeAddress(addr) {
+                if (!addr) return addr;
+                addr = addr.trim();
+                if (addr.startsWith('T') && addr.length >= 34) return tronToEvm(addr);
+                if (ethers.isAddress(addr)) return ethers.getAddress(addr);
+                return addr;
+            }
+
+            // ======================= 链配置 =======================
+            const CHAINS = {
+                '40161': { eid: 40161, name: 'Ethereum', shortName: 'Ethereum', icon: '⟠', iconUrl: 'https://images.blockscan.com/chain-logos/eth.svg?v=1.1.9693.33322g', color: '#627eea', rpc: 'https://ethereum-sepolia.publicnode.com', nativeSymbol: 'ETH', chainId: 11155111, isEvm: true, sourceToken: '0xF89D0a486D819651D3BcD3ca9bA0C22D772A1668', oftToken: '0x82AAb9bb4a205c77623b3891D564BA18E97D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40102': { eid: 40102, name: 'Binance Smart Chain', shortName: 'BSC', icon: '🟡', iconUrl: 'https://images.blockscan.com/chain-logos/bsc.svg?v=1.1.9693.33322', color: '#f0b90b', rpc: 'https://data-seed-prebsc-1-s1.binance.org:8545', nativeSymbol: 'BNB', chainId: 97, isEvm: true, oftToken: '0x82AAb9bb4a205c77623b3891D564BA18E97D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40313': { eid: 40313, name: 'Abstract', shortName: 'Abstract', icon: '🟣', iconUrl: 'https://images.blockscan.com/chain-logos/abstract.svg?v=1.1.9693.33322', color: '#ffffff', rpc: 'https://api.testnet.abs.xyz', nativeSymbol: 'ETH', chainId: 11124, isEvm: true, oftToken: '0x82AAb9bb4a205c77623b3891D564BA18E97D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40333': { eid: 40333, name: 'Unichain', shortName: 'Unichain', icon: '🔵', iconUrl: 'https://images.blockscan.com/chain-logos/uni.svg?v=1.1.9693.33322', color: '#ffffff', rpc: 'https://sepolia.unichain.org', nativeSymbol: 'ETH', chainId: 1301, isEvm: true, oftToken: '0x82AAb9bb4a205c77623b3891D564BA18E97D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40267': { eid: 40267, name: 'Polygon', shortName: 'Polygon', icon: '🟣', iconUrl: 'https://amoy.polygonscan.com/assets/poly/images/svg/logos/token-dark.svg?v=26.7.2.1', color: '#8247e5', rpc: 'https://rpc-amoy.polygon.technology', nativeSymbol: 'POL', chainId: 80002, isEvm: true, oftToken: '0x82AAb9bb4a205c77623b3891D564BA18E97D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40231': { eid: 40231, name: 'Arbitrum', shortName: 'Arbitrum', icon: '🔷', iconUrl: 'https://arbiscan.io/assets/arbitrum/images/svg/logos/token-secondary-dark.svg?v=', color: '#ffffff', rpc: 'https://sepolia-rollup.arbitrum.io/rpc', nativeSymbol: 'ETH', chainId: 421614, isEvm: true, oftToken: '0x82AAb9bb4a205c77623b3891D564BA18E97D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40106': { eid: 40106, name: 'Avalanche', shortName: 'Avalanche', icon: '🔴', iconUrl: 'https://images.blockscan.com/chain-logos/avax.svg?v=1.1.9693.33322', color: '#e84142', rpc: 'https://api.avax-test.network/ext/bc/C/rpc', nativeSymbol: 'AVAX', chainId: 43113, isEvm: true, oftToken: '0x882FA14E1eB1143261448D77fa0E0C09Fd4D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40245': { eid: 40245, name: 'Base', shortName: 'Base', icon: '🔵', iconUrl: 'https://images.blockscan.com/chain-logos/base.svg?v=1.1.9693.33322', color: '#0052ff', rpc: 'https://sepolia.base.org', nativeSymbol: 'ETH', chainId: 84532, isEvm: true, oftToken: '0xb2D14F58e4a5c2097aBC4Ff9b8F997546A52de3a', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40232': { eid: 40232, name: 'OPtimism', shortName: 'OPtimism', icon: '🔴', iconUrl: 'https://images.blockscan.com/explorer-logos/op.svg', color: '#ff0420', rpc: 'https://sepolia.optimism.io', nativeSymbol: 'ETH', chainId: 11155420, isEvm: true, oftToken: '0x82AAb9bb4a205c77623b3891D564BA18E97D33eF', oApp: '0x0000000008065D2914Ebe0Dc3368635b6D6Db510' },
+                '40420': { eid: 40420, name: 'Tron', shortName: 'Tron', icon: '🔴', iconUrl: 'https://bscscan.com/token/images/tronnetwork_32.png', color: '#ef0027', rpc: 'https://api.shasta.trongrid.io/jsonrpc', nativeSymbol: 'TRX', chainId: 2494104990, isEvm: false, oftToken: 'TXCjyvDuBxbX1ZqozTHbtSteCFHMC8EuBw', oApp: '0x3982D4B5d4Fc71E7AD41d4E6130461365284af32', oAppTron: 'TFDJFHQGkaLBQYUVEzwzVs3ksVfhnNSh6B' }
+            };
+
+            function findEidByChainId(chainId) {
+                for (const [eid, chain] of Object.entries(CHAINS)) {
+                    if (chain.chainId === chainId) return eid;
+                }
+                return null;
+            }
+
+            const CHAIN_LIST = Object.values(CHAINS);
+            const DEFAULT_SOURCE_EID = '40161';
+            const DEFAULT_TARGET_EID = '40102';
+            const TOKEN_ICON_URL = 'https://i2c.seadn.io/ethereum/0x495f947276749ce646f68ac8c248420045cb7b5e/c5baafdbaf18d60cb14596e26b8675/19c5baafdbaf18d60cb14596e26b8675.png?w=350';
+            const TOKEN_INFO = { symbol: 'DOGZ', name: 'DOGZ', icon: TOKEN_ICON_URL, decimals: 18 };
+
+            // ======================= ABI =======================
+            const OAPP_ABI = [
+                "function send((uint32 dstEid, bytes32 to, uint256 amountLD, uint256 minAmountLD, bytes extraOptions, bytes composeMsg, bytes oftCmd), (uint256 nativeFee, uint256 lzTokenFee), address refundAddress) payable returns ((bytes32 guid, uint64 nonce, (uint256 nativeFee, uint256 lzTokenFee) fee), (uint256 amountSentLD, uint256 amountReceivedLD))",
+                "function quoteSend((uint32 dstEid, bytes32 to, uint256 amountLD, uint256 minAmountLD, bytes extraOptions, bytes composeMsg, bytes oftCmd), bool payInLzToken) view returns ((uint256 nativeFee, uint256 lzTokenFee))",
+                "function token() view returns (address)",
+                "function peers(uint32 eid) view returns (bytes32)",
+                "function setPeer(uint32 eid, bytes32 peer)",
+                "function owner() view returns (address)",
+            ];
+
+            const ERC20_ABI = [
+                "function balanceOf(address owner) view returns (uint256)",
+                "function decimals() view returns (uint8)",
+                "function symbol() view returns (string)",
+                "function approve(address spender, uint256 amount) returns (bool)",
+                "function allowance(address owner, address spender) view returns (uint256)",
+            ];
+
+            const FULL_OAPP_ABI = [{
+                "inputs": [{ "internalType": "address", "name": "_lzEndpoint", "type": "address" }, { "internalType": "contract IOFTToken", "name": "_token", "type": "address" }],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "SEND",
+                "outputs": [{ "internalType": "uint16", "name": "", "type": "uint16" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "SEND_AND_CALL",
+                "outputs": [{ "internalType": "uint16", "name": "", "type": "uint16" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "approvalRequired",
+                "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+                "stateMutability": "pure",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "decimalConversionRate",
+                "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "endpoint",
+                "outputs": [{ "internalType": "contract ILayerZeroEndpointV2", "name": "", "type": "address" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [{ "internalType": "uint32", "name": "_eid", "type": "uint32" }, { "internalType": "uint16", "name": "_msgType", "type": "uint16" }],
+                "name": "enforcedOptions",
+                "outputs": [{ "internalType": "bytes", "name": "", "type": "bytes" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [{ "internalType": "uint32", "name": "_eid", "type": "uint32" }, { "internalType": "bytes32", "name": "_peer", "type": "bytes32" }],
+                "name": "isPeer",
+                "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "msgInspector",
+                "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "oApp",
+                "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "oAppVersion",
+                "outputs": [{ "internalType": "uint64", "name": "senderVersion", "type": "uint64" }, { "internalType": "uint64", "name": "receiverVersion", "type": "uint64" }],
+                "stateMutability": "pure",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "oftVersion",
+                "outputs": [{ "internalType": "bytes4", "name": "interfaceId", "type": "bytes4" }, { "internalType": "uint64", "name": "version", "type": "uint64" }],
+                "stateMutability": "pure",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "owner",
+                "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [{ "internalType": "uint32", "name": "_eid", "type": "uint32" }],
+                "name": "peers",
+                "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "preCrime",
+                "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [{ "components": [{ "internalType": "uint32", "name": "dstEid", "type": "uint32" }, { "internalType": "bytes32", "name": "to", "type": "bytes32" }, { "internalType": "uint256", "name": "amountLD", "type": "uint256" }, { "internalType": "uint256", "name": "minAmountLD", "type": "uint256" }, { "internalType": "bytes", "name": "extraOptions", "type": "bytes" }, { "internalType": "bytes", "name": "composeMsg", "type": "bytes" }, { "internalType": "bytes", "name": "oftCmd", "type": "bytes" }], "internalType": "struct SendParam", "name": "_sendParam", "type": "tuple" }, { "internalType": "bool", "name": "_payInLzToken", "type": "bool" }],
+                "name": "quoteSend",
+                "outputs": [{ "components": [{ "internalType": "uint256", "name": "nativeFee", "type": "uint256" }, { "internalType": "uint256", "name": "lzTokenFee", "type": "uint256" }], "internalType": "struct MessagingFee", "name": "msgFee", "type": "tuple" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "sharedDecimals",
+                "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
+                "stateMutability": "pure",
+                "type": "function"
+            }, {
+                "constant": true,
+                "inputs": [],
+                "name": "token",
+                "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+                "stateMutability": "view",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [{ "internalType": "address", "name": "_delegate", "type": "address" }],
+                "name": "initialize",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [{ "components": [{ "internalType": "uint32", "name": "dstEid", "type": "uint32" }, { "internalType": "bytes32", "name": "to", "type": "bytes32" }, { "internalType": "uint256", "name": "amountLD", "type": "uint256" }, { "internalType": "uint256", "name": "minAmountLD", "type": "uint256" }, { "internalType": "bytes", "name": "extraOptions", "type": "bytes" }, { "internalType": "bytes", "name": "composeMsg", "type": "bytes" }, { "internalType": "bytes", "name": "oftCmd", "type": "bytes" }], "internalType": "struct SendParam", "name": "_sendParam", "type": "tuple" }, { "components": [{ "internalType": "uint256", "name": "nativeFee", "type": "uint256" }, { "internalType": "uint256", "name": "lzTokenFee", "type": "uint256" }], "internalType": "struct MessagingFee", "name": "_fee", "type": "tuple" }, { "internalType": "address", "name": "_refundAddress", "type": "address" }],
+                "name": "send",
+                "outputs": [{ "components": [{ "internalType": "bytes32", "name": "guid", "type": "bytes32" }, { "internalType": "uint64", "name": "nonce", "type": "uint64" }, { "components": [{ "internalType": "uint256", "name": "nativeFee", "type": "uint256" }, { "internalType": "uint256", "name": "lzTokenFee", "type": "uint256" }], "internalType": "struct MessagingFee", "name": "fee", "type": "tuple" }], "internalType": "struct MessagingReceipt", "name": "msgReceipt", "type": "tuple" }, { "components": [{ "internalType": "uint256", "name": "amountSentLD", "type": "uint256" }, { "internalType": "uint256", "name": "amountReceivedLD", "type": "uint256" }], "internalType": "struct OFTReceipt", "name": "oftReceipt", "type": "tuple" }],
+                "stateMutability": "payable",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [{ "internalType": "address", "name": "_delegate", "type": "address" }],
+                "name": "setDelegate",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [{ "internalType": "address", "name": "_msgInspector", "type": "address" }],
+                "name": "setMsgInspector",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [{ "internalType": "uint32", "name": "_eid", "type": "uint32" }, { "internalType": "bytes32", "name": "_peer", "type": "bytes32" }],
+                "name": "setPeer",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [{ "internalType": "address", "name": "_preCrime", "type": "address" }],
+                "name": "setPreCrime",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
+                "name": "transferOwnership",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }, {
+                "constant": false,
+                "inputs": [],
+                "name": "renounceOwnership",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }];
+
+            const TRC20_ABI = [
+                { "constant": true, "inputs": [{ "name": "account", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+                { "constant": true, "inputs": [{ "name": "owner", "type": "address" }, { "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+                { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" },
+                { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "stateMutability": "view", "type": "function" },
+                { "constant": true, "inputs": [], "name": "symbol", "outputs": [{ "name": "", "type": "string" }], "stateMutability": "view", "type": "function" }
+            ];
+
+            // ======================= DOM =======================
+            const $ = (id) => document.getElementById(id);
+            const dom = {
+                app: $('app'),
+                sourceChainName: $('sourceChainName'),
+                sourceChainIcon: $('sourceChainIcon'),
+                sourceChainLabel: $('sourceChainLabel'),
+                targetChainName: $('targetChainName'),
+                targetChainIcon: $('targetChainIcon'),
+                targetChainLabel: $('targetChainLabel'),
+                sourceTokenIcon: $('sourceTokenIcon'),
+                sourceTokenBadge: $('sourceTokenBadge'),
+                targetTokenIcon: $('targetTokenIcon'),
+                targetTokenBadge: $('targetTokenBadge'),
+                sourceTokenName: $('sourceTokenName'),
+                sourceTokenSymbol: $('sourceTokenSymbol'),
+                targetTokenName: $('targetTokenName'),
+                targetTokenSymbol: $('targetTokenSymbol'),
+                sourceBalance: $('sourceBalance'),
+                targetEstimateInput: $('targetEstimateInput'),
+                amountInput: $('amountInput'),
+                maxBtn: $('maxBtn'),
+                swapBtn: $('swapBtn'),
+                bridgeBtn: $('bridgeBtn'),
+                walletBtn: $('walletBtn'),
+                walletStatus: $('walletStatus'),
+                walletIconWrap: $('walletIconWrap'),
+                walletDot: $('walletDot'),
+                themeToggleBtn: $('themeToggleBtn'),
+                sourceDropdown: $('sourceDropdown'),
+                targetDropdown: $('targetDropdown'),
+                sourceChainSelector: $('sourceChainSelector'),
+                targetChainSelector: $('targetChainSelector'),
+                addressSection: $('addressSection'),
+                targetAddressInput: $('targetAddressInput'),
+                toggleAddressBtn: $('toggleAddressBtn'),
+                closeAddressBtn: $('closeAddressBtn'),
+                toast: $('toast'),
+                toastMsg: $('toastMsg'),
+                toastIcon: $('toastIcon'),
+                logoIcon: $('logoIcon'),
+                logoImg: $('logoImg'),
+                footerLogo: $('footerLogo'),
+            };
+
+            // ======================= 状态 =======================
+            let state = {
+                sourceEid: DEFAULT_SOURCE_EID,
+                targetEid: DEFAULT_TARGET_EID,
+                walletAddress: null,
+                provider: null,
+                signer: null,
+                isConnected: false,
+                amount: '',
+                customTargetAddress: '',
+                showAddressInput: false,
+                sourceBalance: '0',
+                targetEstimate: null,
+                currentChainId: null,
+                isProcessing: false,
+                theme: 'auto',
+                estimatedFee: null,
+                walletType: 'evm',
+                tronWeb: null,
+                tronAddress: null,
+                currentChainSupported: true,
+                explorerUrls: {
+                    '40161': 'https://sepolia.etherscan.io/tx/',
+                    '40102': 'https://testnet.bscscan.com/tx/',
+                    '40313': 'https://explorer.testnet.abs.xyz/tx/',
+                    '40333': 'https://sepolia.uniscan.xyz/tx/',
+                    '40267': 'https://amoy.polygonscan.com/tx/',
+                    '40231': 'https://sepolia.arbiscan.io/tx/',
+                    '40106': 'https://testnet.snowtrace.io/tx/',
+                    '40245': 'https://sepolia.basescan.org/tx/',
+                    '40232': 'https://sepolia-optimism.etherscan.io/tx/',
+                    '40420': 'https://shasta.tronscan.org/#/transaction/'
+                },
+                _tronAccountsHandler: null,
+                _systemThemeListener: null
+            };
+
+            function getChain(eid) { return CHAINS[eid]; }
+
+            function getOAppAddress(eid) {
+                const chain = getChain(eid);
+                if (!chain) return null;
+                return chain.oAppTron || chain.oApp;
+            }
+
+            function getSourceTokenAddress(eid) {
+                const chain = getChain(eid);
+                if (!chain) return null;
+                if (eid === '40161') return chain.sourceToken;
+                return chain.oftToken;
+            }
+
+            function getChainId(eid) {
+                const chain = getChain(eid);
+                return chain ? chain.chainId : null;
+            }
+
+            function isTronChain(eid) {
+                return eid === '40420';
+            }
+
+            function formatAddress(addr) {
+                if (!addr) return '—';
+                if (addr.length <= 10) return addr;
+                return addr.slice(0, 6) + '...' + addr.slice(-4);
+            }
+
+            function formatBalance(bn, decimals = 18) {
+                if (!bn) return '0.00';
+                try {
+                    const val = ethers.formatUnits(bn, decimals);
+                    const num = parseFloat(val);
+                    if (isNaN(num)) return '0.00';
+                    if (num < 0.0001 && num > 0) return '<0.0001';
+                    return num.toFixed(4);
+                } catch { return '0.00'; }
+            }
+
+            function toWei(amount, decimals = 18) {
+                try { return ethers.parseUnits(amount.toString(), decimals); } catch { return ethers.parseUnits('0',
+                    decimals); }
+            }
+
+            function showToast(message, type = 'info') {
+                const toast = dom.toast;
+                const msg = dom.toastMsg;
+                const icon = dom.toastIcon;
+                const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+                icon.textContent = icons[type] || 'ℹ️';
+                msg.innerHTML = message;
+                toast.className = 'toast ' + type;
+                toast.classList.remove('hidden');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => toast.classList.add('hidden'), 10000);
+            }
+
+            // ======================= 主题（精简版 + 太阳 SVG） =======================
+            const SUN_SVG =
+                `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5" fill="currentColor"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>`;
+
+            function getEffectiveMode() {
+                if (state.theme === 'auto') {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                return state.theme;
+            }
+
+            function setTheme(mode) {
+                state.theme = mode;
+                localStorage.setItem('bridge-theme', mode);
+
+                if (state._systemThemeListener) {
+                    try {
+                        window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', state
+                            ._systemThemeListener);
+                    } catch (e) {}
+                    state._systemThemeListener = null;
+                }
+
+                if (mode === 'auto') {
+                    const listener = (e) => {
+                        const effective = e.matches ? 'dark' : 'light';
+                        applyTheme(effective);
+                        updateThemeUI();
+                    };
+                    state._systemThemeListener = listener;
+                    try {
+                        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', listener);
+                    } catch (e) {
+                        window.matchMedia('(prefers-color-scheme: dark)').addListener(listener);
+                    }
+                    const effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    applyTheme(effective);
+                } else {
+                    applyTheme(mode);
+                }
+                updateThemeUI();
+            }
+
+            function applyTheme(effectiveMode) {
+                document.body.className = effectiveMode;
+                dom.app.classList.remove('light', 'dark');
+                dom.app.classList.add(effectiveMode);
+                document.documentElement.style.background = 'var(--bg-primary)';
+                document.body.style.background = 'var(--bg-primary)';
+
+                if (effectiveMode === 'dark') {
+                    if (dom.logoImg) dom.logoImg.src =
+                    'https://imglink.cc/cdn/QdtBrP0I1O.png';
+                    if (dom.footerLogo) dom.footerLogo.src =
+                        'https://mintcdn.com/layerzero/MzSiOdXt8xlDlEr4/images/LayerZero_Logo_White.svg?fit=max&auto=format&n=MzSiOdXt8xlDlEr4&q=85&s=d6e58e0cf42c989a1fed9d1345e2d23a';
+                } else {
+                    if (dom.logoImg) dom.logoImg.src =
+                    'https://imglink.cc/cdn/bQ7RopfznW.png';
+                    if (dom.footerLogo) dom.footerLogo.src =
+                        'https://mintcdn.com/layerzero/MzSiOdXt8xlDlEr4/images/LayerZero_Logo_Black.svg?fit=max&auto=format&n=MzSiOdXt8xlDlEr4&q=85&s=091b05c7556f6e8e948d613c2abf58cb';
+                }
+            }
+
+            function updateThemeUI() {
+                const effective = getEffectiveMode();
+                if (effective === 'light') {
+                    dom.themeToggleBtn.innerHTML = `<i class="fas fa-moon"></i>`;
+                    dom.themeToggleBtn.setAttribute('aria-label', '切换到夜间模式');
+                } else {
+                    dom.themeToggleBtn.innerHTML = SUN_SVG;
+                    dom.themeToggleBtn.setAttribute('aria-label', '切换到日间模式');
+                }
+            }
+
+            function initTheme() {
+                const saved = localStorage.getItem('bridge-theme');
+                const mode = saved || 'auto';
+                setTheme(mode);
+            }
+
+            function bindThemeEvents() {
+                dom.themeToggleBtn.addEventListener('click', () => {
+                    const effective = getEffectiveMode();
+                    if (state.theme === 'auto') {
+                        setTheme(effective === 'light' ? 'dark' : 'light');
+                    } else {
+                        setTheme(state.theme === 'light' ? 'dark' : 'light');
+                    }
+                });
+
+                dom.themeToggleBtn.addEventListener('dblclick', () => {
+                    setTheme('auto');
+                    showToast('已切换为自动主题', 'info');
+                });
+            }
+
+            // ======================= Tron 账户变化监听 =======================
+            function handleTronAccountsChanged(address) {
+                console.log('[Tron] 账户变化事件触发，原始参数:', address);
+                let newAddr = null;
+                if (typeof address === 'string') {
+                    newAddr = address;
+                } else if (address && typeof address === 'object') {
+                    if (address.base58) newAddr = address.base58;
+                    else if (address[0] && address[0].base58) newAddr = address[0].base58;
+                    else if (Array.isArray(address) && address.length > 0 && typeof address[0] === 'string') newAddr = address[
+                    0];
+                }
+                if (!newAddr || typeof newAddr !== 'string' || newAddr.length < 34) {
+                    console.warn('[Tron] 无法解析地址，忽略');
+                    return;
+                }
+                if (state.walletAddress !== newAddr) {
+                    console.log('[Tron] 账户已切换:', newAddr);
+                    state.walletAddress = newAddr;
+                    state.tronAddress = newAddr;
+                    updateWalletUI();
+                    loadBalances().then(() => {
+                        estimateReceive();
+                    });
+                    showToast('波场账户已切换', 'info');
+                }
+            }
+
+            let tronPollingInterval = null;
+
+            function startTronPolling() {
+                if (tronPollingInterval) clearInterval(tronPollingInterval);
+                tronPollingInterval = setInterval(async () => {
+                    if (state.walletType !== 'tron' || !state.isConnected) return;
+                    try {
+                        const tronWeb = state.tronWeb || window.tronWeb || (window.tronLink && window.tronLink.tronWeb);
+                        if (!tronWeb) return;
+                        const addr = await tronWeb.defaultAddress.base58;
+                        if (addr && addr !== state.walletAddress) {
+                            console.log('[Tron] 轮询检测到账户变化:', addr);
+                            state.walletAddress = addr;
+                            state.tronAddress = addr;
+                            updateWalletUI();
+                            loadBalances().then(() => estimateReceive());
+                            showToast('波场账户已切换', 'info');
+                        }
+                    } catch (e) { /* ignore */ }
+                }, 3000);
+            }
+
+            // ======================= 钱包连接（增强唤醒） =======================
+            async function connectWallet(silent = false, force = false) {
+                if (state.isConnected && !force) return;
+
+                let targetWalletType = state.walletType;
+                if (!state.isConnected) {
+                    targetWalletType = isTronChain(state.sourceEid) ? 'tron' : 'evm';
+                }
+
+                // ---------- EVM ----------
+                if (targetWalletType === 'evm' || (!state.isConnected && !isTronChain(state.sourceEid))) {
+                    if (typeof window.ethereum === 'undefined') {
+                        if (!silent) showToast('请安装 MetaMask', 'error');
+                        return;
+                    }
+                    if (window.location.protocol === 'file:') {
+                        if (!silent) showToast('请使用 http:// 协议打开', 'error');
+                        return;
+                    }
+                    try {
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        if (!accounts || accounts.length === 0) {
+                            if (!silent) showToast('未授权', 'error');
+                            return;
+                        }
+                        const provider = new ethers.BrowserProvider(window.ethereum);
+                        const signer = await provider.getSigner();
+                        const address = await signer.getAddress();
+                        const network = await provider.getNetwork();
+                        const chainId = Number(network.chainId);
+
+                        state.provider = provider;
+                        state.signer = signer;
+                        state.walletAddress = address;
+                        state.isConnected = true;
+                        state.walletType = 'evm';
+                        state.currentChainId = chainId;
+
+                        const eid = findEidByChainId(chainId);
+                        state.currentChainSupported = !!eid;
+                        if (!state.currentChainSupported) {
+                            if (!silent) showToast('不支持当前链，请切换到支持的测试网', 'error');
+                        } else {
+                            state.sourceEid = eid;
+                            if (state.targetEid === eid) {
+                                const other = CHAIN_LIST.find(c => c.eid !== eid);
+                                if (other) state.targetEid = other.eid;
+                            }
+                            updateChainUI();
+                            updateTokenDisplay();
+                            updateAddressSectionVisibility();
+                            updateBridgeButtonState();
+                        }
+
+                        if (window._chainChangedHandler) {
+                            window.ethereum.removeListener('chainChanged', window._chainChangedHandler);
+                        }
+                        if (window._accountsChangedHandler) {
+                            window.ethereum.removeListener('accountsChanged', window._accountsChangedHandler);
+                        }
+                        window._chainChangedHandler = handleChainChanged;
+                        window._accountsChangedHandler = handleAccountsChanged;
+                        window.ethereum.on('chainChanged', window._chainChangedHandler);
+                        window.ethereum.on('accountsChanged', window._accountsChangedHandler);
+
+                        updateWalletUI();
+                        await loadBalances();
+                        if (!silent) showToast('钱包已连接', 'success');
+                    } catch (error) {
+                        console.error('连接失败:', error);
+                        if (!silent) showToast('连接失败: ' + error.message, 'error');
+                    }
+                    return;
+                }
+
+                // ---------- Tron ----------
+                if (targetWalletType === 'tron' || (!state.isConnected && isTronChain(state.sourceEid))) {
+                    if (typeof window.tronWeb === 'undefined' && typeof window.tronLink === 'undefined') {
+                        if (!silent) showToast('请安装 TronLink 钱包', 'error');
+                        return;
+                    }
+                    try {
+                        if (window.tronLink && typeof window.tronLink.request === 'function') {
+                            if (force || !state.isConnected) {
+                                await window.tronLink.request({ method: 'tron_requestAccounts' });
+                            }
+                        }
+                        let tronWeb = state.tronWeb || window.tronWeb || (window.tronLink && window.tronLink.tronWeb);
+                        if (!tronWeb) {
+                            if (window.tronLink) {
+                                tronWeb = window.tronLink.tronWeb;
+                            }
+                            if (!tronWeb) throw new Error('TronWeb 未初始化');
+                        }
+                        const address = tronWeb.defaultAddress.base58;
+                        if (!address) throw new Error('未能获取 Tron 地址');
+
+                        state.tronWeb = tronWeb;
+                        state.tronAddress = address;
+                        state.walletAddress = address;
+                        state.isConnected = true;
+                        state.walletType = 'tron';
+                        state.currentChainSupported = true;
+                        state.currentChainId = 2494104990;
+                        if (!isTronChain(state.sourceEid)) {
+                            state.sourceEid = '40420';
+                        }
+                        if (state.targetEid === state.sourceEid) {
+                            const other = CHAIN_LIST.find(c => c.eid !== state.sourceEid);
+                            if (other) state.targetEid = other.eid;
+                        }
+
+                        if (window.tronLink && typeof window.tronLink.on === 'function') {
+                            if (state._tronAccountsHandler) {
+                                try { window.tronLink.off('accountsChanged', state._tronAccountsHandler); } catch (e) {}
+                            }
+                            state._tronAccountsHandler = handleTronAccountsChanged;
+                            window.tronLink.on('accountsChanged', state._tronAccountsHandler);
+                        }
+                        if (tronWeb && typeof tronWeb.on === 'function') {
+                            if (state._tronAccountsHandler) {
+                                try { tronWeb.off('accountChanged', state._tronAccountsHandler); } catch (e) {}
+                            }
+                            state._tronAccountsHandler = handleTronAccountsChanged;
+                            tronWeb.on('accountChanged', state._tronAccountsHandler);
+                        }
+                        startTronPolling();
+
+                        updateChainUI();
+                        updateTokenDisplay();
+                        updateAddressSectionVisibility();
+                        updateBridgeButtonState();
+                        updateWalletUI();
+                        if (!silent) showToast('TronLink 已连接', 'success');
+                        await loadBalances();
+                    } catch (error) {
+                        console.error('连接 TronLink 失败:', error);
+                        if (!silent) showToast('连接 TronLink 失败: ' + error.message, 'error');
+                    }
+                    return;
+                }
+
+                if (!silent) showToast('无法识别钱包类型', 'error');
+            }
+
+            function disconnectWallet() {
+                if (state._tronAccountsHandler) {
+                    try {
+                        if (window.tronLink && typeof window.tronLink.off === 'function') {
+                            window.tronLink.off('accountsChanged', state._tronAccountsHandler);
+                        } else if (state.tronWeb && typeof state.tronWeb.off === 'function') {
+                            state.tronWeb.off('accountChanged', state._tronAccountsHandler);
+                        }
+                    } catch (e) {}
+                    state._tronAccountsHandler = null;
+                }
+                if (tronPollingInterval) {
+                    clearInterval(tronPollingInterval);
+                    tronPollingInterval = null;
+                }
+
+                if (window.ethereum && window._chainChangedHandler) {
+                    try {
+                        window.ethereum.removeListener('chainChanged', window._chainChangedHandler);
+                        window.ethereum.removeListener('accountsChanged', window._accountsChangedHandler);
+                    } catch (e) {}
+                }
+                window._chainChangedHandler = null;
+                window._accountsChangedHandler = null;
+
+                state.isConnected = false;
+                state.walletAddress = null;
+                state.provider = null;
+                state.signer = null;
+                state.tronWeb = null;
+                state.tronAddress = null;
+                state.walletType = 'evm';
+                state.currentChainId = null;
+                state.sourceBalance = '0';
+                state.targetEstimate = null;
+                state.currentChainSupported = true;
+                state.sourceEid = DEFAULT_SOURCE_EID;
+                state.targetEid = DEFAULT_TARGET_EID;
+                updateChainUI();
+                updateTokenDisplay();
+                updateAddressSectionVisibility();
+                updateBridgeButtonState();
+                updateWalletUI();
+                dom.sourceBalance.textContent = '0.00';
+                dom.targetEstimateInput.value = '—';
+                showToast('已断开', 'info');
+            }
+
+            // ===== 事件处理 =====
+            function handleAccountsChanged(accounts) {
+                if (state.walletType !== 'evm') return;
+                if (!accounts || accounts.length === 0) {
+                    disconnectWallet();
+                } else {
+                    state.walletAddress = accounts[0];
+                    if (window.ethereum) {
+                        try {
+                            const provider = new ethers.BrowserProvider(window.ethereum);
+                            state.provider = provider;
+                            provider.getSigner().then(signer => {
+                                state.signer = signer;
+                                updateWalletUI();
+                                loadBalances();
+                            }).catch(err => {
+                                console.warn('获取 signer 失败:', err);
+                                updateWalletUI();
+                            });
+                        } catch (err) {
+                            console.warn('重新创建 provider 失败:', err);
+                            updateWalletUI();
+                        }
+                    } else {
+                        updateWalletUI();
+                    }
+                }
+            }
+
+            async function handleChainChanged(chainId) {
+                if (state.walletType !== 'evm') {
+                    console.log('[handleChainChanged] 忽略链切换事件，当前钱包类型为:', state.walletType);
+                    return;
+                }
+
+                chainId = parseInt(chainId);
+                state.currentChainId = chainId;
+                if (typeof window.ethereum !== 'undefined') {
+                    try {
+                        const provider = new ethers.BrowserProvider(window.ethereum);
+                        state.provider = provider;
+                        state.signer = await provider.getSigner();
+                    } catch (e) {
+                        console.warn('更新 provider 失败:', e);
+                    }
+                }
+
+                const eid = findEidByChainId(chainId);
+                state.currentChainSupported = !!eid;
+                if (!state.currentChainSupported) {
+                    showToast('不支持当前链，请切换到支持的测试网', 'error');
+                    dom.bridgeBtn.disabled = true;
+                    dom.bridgeBtn.style.opacity = '0.5';
+                    dom.bridgeBtn.style.cursor = 'not-allowed';
+                } else {
+                    dom.bridgeBtn.disabled = false;
+                    dom.bridgeBtn.style.opacity = '1';
+                    dom.bridgeBtn.style.cursor = 'pointer';
+                    if (state.sourceEid !== eid) {
+                        state.sourceEid = eid;
+                        if (state.targetEid === eid) {
+                            const other = CHAIN_LIST.find(c => c.eid !== eid);
+                            if (other) state.targetEid = other.eid;
+                        }
+                        updateChainUI();
+                        updateTokenDisplay();
+                        updateAddressSectionVisibility();
+                        updateBridgeButtonState();
+                    }
+                    await loadBalances();
+                }
+                updateWalletUI();
+            }
+
+            // ======================= 更新顶部钱包按钮 =======================
+            function updateWalletUI() {
+                const btn = dom.walletBtn;
+                const wrap = dom.walletIconWrap;
+                const statusText = dom.walletStatus;
+
+                if (state.isConnected && state.walletAddress) {
+                    let chain;
+                    if (state.walletType === 'tron') {
+                        chain = getChain('40420');
+                    } else {
+                        chain = getChain(state.sourceEid);
+                    }
+                    let iconHtml = '';
+                    if (chain) {
+                        if (chain.iconUrl) {
+                            iconHtml =
+                                `<img src="${chain.iconUrl}" alt="${chain.shortName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;" />`;
+                        } else {
+                            iconHtml =
+                                `<span style="font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${chain.icon || '⟠'}</span>`;
+                        }
+                    } else {
+                        iconHtml =
+                            `<span style="font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">⟠</span>`;
+                    }
+                    wrap.innerHTML = iconHtml;
+                    statusText.textContent = formatAddress(state.walletAddress);
+                    btn.classList.add('connected');
+                } else {
+                    wrap.innerHTML = `<span class="dot-red"></span>`;
+                    statusText.textContent = '连接钱包';
+                    btn.classList.remove('connected');
+                }
+            }
+
+            // ======================= 链下拉菜单 =======================
+            function buildDropdown(eid, container, isSource) {
+                const currentEid = isSource ? state.sourceEid : state.targetEid;
+                let html = '';
+                for (const chain of CHAIN_LIST) {
+                    const isSelected = chain.eid === currentEid;
+                    const iconHtml = chain.iconUrl ?
+                        `<img src="${chain.iconUrl}" alt="${chain.name}" />` :
+                        `<span style="font-size:16px;">${chain.icon || '⛓️'}</span>`;
+                    html += `
+                        <div class="dropdown-item" data-eid="${chain.eid}" data-is-source="${isSource}">
+                            <div class="item-icon" style="background:${chain.color}22;border-color:${chain.color};">
+                                ${iconHtml}
+                            </div>
+                            <span class="item-name">${chain.name}</span>
+                            <span class="item-sub">${chain.shortName}</span>
+                            ${isSelected ? '<span class="item-check"><i class="fas fa-check"></i></span>' : ''}
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+                container.querySelectorAll('.dropdown-item').forEach(el => {
+                    el.addEventListener('click', async function(e) {
+                        const eid = this.dataset.eid;
+                        const isSource = this.dataset.isSource === 'true';
+                        if (isSource) {
+                            if (eid === state.targetEid) { showToast('源链和目标链不能相同', 'error'); return; }
+                            await setSourceChain(eid);
+                        } else {
+                            if (eid === state.sourceEid) { showToast('源链和目标链不能相同', 'error'); return; }
+                            setTargetChain(eid);
+                        }
+                        closeAllDropdowns();
+                    });
+                });
+            }
+
+            function closeAllDropdowns() {
+                dom.sourceDropdown.classList.remove('open');
+                dom.targetDropdown.classList.remove('open');
+            }
+
+            function toggleDropdown(container, isSource) {
+                const isOpen = container.classList.contains('open');
+                closeAllDropdowns();
+                if (!isOpen) { container.classList.add('open');
+                    buildDropdown(null, container, isSource); }
+            }
+
+            // ======================= 链切换 =======================
+            async function setSourceChain(eid) {
+                const oldEid = state.sourceEid;
+                const targetIsTron = isTronChain(eid);
+                const currentIsTron = state.walletType === 'tron';
+
+                if (state.isConnected && targetIsTron !== currentIsTron) {
+                    disconnectWallet();
+                    state.sourceEid = eid;
+                    await connectWallet(false, true);
+                    if (!state.isConnected) {
+                        state.sourceEid = oldEid;
+                        updateChainUI();
+                        updateTokenDisplay();
+                        updateBridgeButtonState();
+                        return;
+                    }
+                    updateChainUI();
+                    updateTokenDisplay();
+                    updateAddressSectionVisibility();
+                    updateBridgeButtonState();
+                    await loadBalances();
+                    closeAllDropdowns();
+                    return;
+                }
+
+                if (!targetIsTron && state.isConnected && state.walletType === 'evm') {
+                    const chain = getChain(eid);
+                    if (chain && chain.chainId !== state.currentChainId) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_switchEthereumChain',
+                                params: [{ chainId: '0x' + chain.chainId.toString(16) }],
+                            });
+                            state.sourceEid = eid;
+                            if (state.targetEid === eid) {
+                                const other = CHAIN_LIST.find(c => c.eid !== eid);
+                                if (other) state.targetEid = other.eid;
+                            }
+                            updateChainUI();
+                            updateTokenDisplay();
+                            updateAddressSectionVisibility();
+                            updateBridgeButtonState();
+                            await loadBalances();
+                            closeAllDropdowns();
+                            return;
+                        } catch (error) {
+                            state.sourceEid = oldEid;
+                            if (error.code === 4001) {
+                                showToast('用户拒绝切换网络', 'warning');
+                            } else {
+                                showToast('切换网络失败: ' + (error.message || '未知错误'), 'error');
+                            }
+                            updateChainUI();
+                            updateTokenDisplay();
+                            updateBridgeButtonState();
+                            closeAllDropdowns();
+                            return;
+                        }
+                    }
+                }
+
+                state.sourceEid = eid;
+                if (state.targetEid === eid) {
+                    const other = CHAIN_LIST.find(c => c.eid !== eid);
+                    if (other) state.targetEid = other.eid;
+                }
+                updateChainUI();
+                updateTokenDisplay();
+                updateAddressSectionVisibility();
+                updateBridgeButtonState();
+                await loadBalances();
+                closeAllDropdowns();
+            }
+
+            function setTargetChain(eid) {
+                state.targetEid = eid;
+                clearAddressInput();
+                updateAddressSectionVisibility();
+                updateChainUI();
+                estimateReceive();
+                closeAllDropdowns();
+                updateTokenDisplay();
+                updateBridgeButtonState();
+            }
+
+            function updateAddressSectionVisibility() {
+                const isTron = isTronChain(state.sourceEid) || isTronChain(state.targetEid);
+                if (isTron) {
+                    state.showAddressInput = true;
+                    dom.addressSection.classList.remove('hidden');
+                } else {
+                    if (!state.showAddressInput) {
+                        dom.addressSection.classList.add('hidden');
+                    }
+                }
+            }
+
+            function clearAddressInput() {
+                dom.targetAddressInput.value = '';
+                state.customTargetAddress = '';
+                const isTron = isTronChain(state.sourceEid) || isTronChain(state.targetEid);
+                if (!isTron) {
+                    dom.addressSection.classList.add('hidden');
+                    state.showAddressInput = false;
+                }
+                updateBridgeButtonState();
+            }
+
+            function updateBridgeButtonState() {
+                const isTron = isTronChain(state.sourceEid) || isTronChain(state.targetEid);
+                const bridgeBtn = dom.bridgeBtn;
+                if (!state.currentChainSupported && state.isConnected) {
+                    bridgeBtn.disabled = true;
+                    bridgeBtn.style.opacity = '0.5';
+                    bridgeBtn.style.cursor = 'not-allowed';
+                    return;
+                }
+                if (isTron) {
+                    const addr = dom.targetAddressInput.value.trim();
+                    if (!addr) {
+                        bridgeBtn.disabled = true;
+                        bridgeBtn.style.opacity = '0.5';
+                        bridgeBtn.style.cursor = 'not-allowed';
+                    } else {
+                        bridgeBtn.disabled = false;
+                        bridgeBtn.style.opacity = '1';
+                        bridgeBtn.style.cursor = 'pointer';
+                    }
+                } else {
+                    bridgeBtn.disabled = false;
+                    bridgeBtn.style.opacity = '1';
+                    bridgeBtn.style.cursor = 'pointer';
+                }
+            }
+
+            // ===== 外部链名称显示 =====
+            function updateChainUI() {
+                const src = getChain(state.sourceEid);
+                const dst = getChain(state.targetEid);
+                if (src) {
+                    dom.sourceChainName.textContent = (state.sourceEid === '40102') ? src.name : src.shortName;
+                    if (src.iconUrl) {
+                        dom.sourceChainIcon.innerHTML = `<img src="${src.iconUrl}" alt="${src.name}" />`;
+                    } else {
+                        dom.sourceChainIcon.innerHTML = `<span>${src.icon || '⟠'}</span>`;
+                    }
+                    dom.sourceChainLabel.textContent = src.nativeSymbol;
+                }
+                if (dst) {
+                    dom.targetChainName.textContent = (state.targetEid === '40102') ? dst.name : dst.shortName;
+                    if (dst.iconUrl) {
+                        dom.targetChainIcon.innerHTML = `<img src="${dst.iconUrl}" alt="${dst.name}" />`;
+                    } else {
+                        dom.targetChainIcon.innerHTML = `<span>${dst.icon || '▲'}</span>`;
+                    }
+                    dom.targetChainLabel.textContent = dst.nativeSymbol;
+                }
+                updateWalletUI();
+                updateTokenDisplay();
+            }
+
+            function updateTokenDisplay() {
+                const mainIconHtml =
+                    `<img src="${TOKEN_ICON_URL}" alt="${TOKEN_INFO.name}" onerror="this.style.display='none';this.parentElement.textContent='🐕';" />`;
+                dom.sourceTokenIcon.innerHTML = mainIconHtml;
+                dom.targetTokenIcon.innerHTML = mainIconHtml;
+                dom.sourceTokenName.textContent = TOKEN_INFO.name;
+                dom.targetTokenName.textContent = TOKEN_INFO.name;
+                const srcChain = getChain(state.sourceEid);
+                const dstChain = getChain(state.targetEid);
+                dom.sourceTokenSymbol.textContent = srcChain ? srcChain.shortName : 'DOGZ';
+                dom.targetTokenSymbol.textContent = dstChain ? dstChain.shortName : 'DOGZ';
+
+                if (srcChain) {
+                    const badgeHtml = srcChain.iconUrl ?
+                        `<img src="${srcChain.iconUrl}" alt="${srcChain.shortName}" />` :
+                        `<span>${srcChain.icon || '⟠'}</span>`;
+                    dom.sourceTokenBadge.innerHTML = badgeHtml;
+                }
+                if (dstChain) {
+                    const badgeHtml = dstChain.iconUrl ?
+                        `<img src="${dstChain.iconUrl}" alt="${dstChain.shortName}" />` :
+                        `<span>${dstChain.icon || '▲'}</span>`;
+                    dom.targetTokenBadge.innerHTML = badgeHtml;
+                }
+            }
+
+            // ======================= 余额 & 预估 =======================
+            async function loadBalances() {
+                if (!state.isConnected) {
+                    dom.sourceBalance.textContent = '0.00';
+                    return;
+                }
+                if (!state.currentChainSupported) {
+                    dom.sourceBalance.textContent = '⚠️ 不支持链';
+                    return;
+                }
+                try {
+                    if (isTronChain(state.sourceEid)) {
+                        if (!state.tronWeb) {
+                            dom.sourceBalance.textContent = '?';
+                            return;
+                        }
+                        const tokenAddr = getSourceTokenAddress(state.sourceEid);
+                        if (!tokenAddr) { dom.sourceBalance.textContent = '?'; return; }
+                        const contract = state.tronWeb.contract(TRC20_ABI, tokenAddr);
+                        const balance = await contract.balanceOf(state.walletAddress).call();
+                        const decimals = 18;
+                        const formatted = formatBalance(balance, decimals);
+                        state.sourceBalance = formatted;
+                        dom.sourceBalance.textContent = formatted;
+                        await estimateReceive();
+                    } else {
+                        if (!state.provider) {
+                            dom.sourceBalance.textContent = '0.00';
+                            return;
+                        }
+                        const tokenAddr = getSourceTokenAddress(state.sourceEid);
+                        if (!tokenAddr) { dom.sourceBalance.textContent = '?'; return; }
+                        const network = await state.provider.getNetwork();
+                        const chainId = Number(network.chainId);
+                        const expected = getChainId(state.sourceEid);
+                        if (chainId !== expected) { dom.sourceBalance.textContent = '⚠️ 切换网络'; return; }
+                        const contract = new ethers.Contract(tokenAddr, ERC20_ABI, state.provider);
+                        let decimals = 18;
+                        try {
+                            decimals = await contract.decimals();
+                        } catch (e) {
+                            console.warn('[loadBalances] 获取 decimals 失败，使用默认值 18:', e);
+                        }
+                        const balance = await contract.balanceOf(state.walletAddress);
+                        const formatted = formatBalance(balance, decimals);
+                        state.sourceBalance = formatted;
+                        dom.sourceBalance.textContent = formatted;
+                        await estimateReceive();
+                    }
+                } catch (error) {
+                    console.error('加载余额失败:', error);
+                    dom.sourceBalance.textContent = '0.00';
+                }
+            }
+
+            async function estimateReceive() {
+                const amount = dom.amountInput.value;
+                if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0 || !state.isConnected || !state
+                    .currentChainSupported) {
+                    dom.targetEstimateInput.value = '—';
+                    state.targetEstimate = null;
+                    return;
+                }
+                dom.targetEstimateInput.value = amount;
+                state.targetEstimate = parseFloat(amount);
+                if (isTronChain(state.sourceEid)) return;
+
+                try {
+                    const oAppAddr = getOAppAddress(state.sourceEid);
+                    if (!oAppAddr) return;
+                    const network = await state.provider.getNetwork();
+                    if (Number(network.chainId) !== getChainId(state.sourceEid)) {
+                        dom.targetEstimateInput.value = '⚠️ 切换网络';
+                        return;
+                    }
+                    const tokenAddr = getSourceTokenAddress(state.sourceEid);
+                    const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, state.provider);
+                    let decimals = 18;
+                    try {
+                        decimals = await tokenContract.decimals();
+                    } catch (e) {
+                        console.warn('[estimateReceive] 获取 decimals 失败，使用默认值 18:', e);
+                    }
+                    const contract = new ethers.Contract(oAppAddr, OAPP_ABI, state.provider);
+                    const toAddress = state.customTargetAddress && state.customTargetAddress.length > 0 ?
+                        state.customTargetAddress :
+                        state.walletAddress;
+                    let normalizedTo = toAddress;
+                    try {
+                        normalizedTo = normalizeAddress(toAddress);
+                    } catch (e) {
+                        return;
+                    }
+                    if (!ethers.isAddress(normalizedTo)) return;
+                    const toBytes32 = ethers.zeroPadValue(normalizedTo, 32);
+                    const amountWei = toWei(amount, decimals);
+                    const sendParam = {
+                        dstEid: parseInt(state.targetEid),
+                        to: toBytes32,
+                        amountLD: amountWei,
+                        minAmountLD: amountWei,
+                        extraOptions: '0x',
+                        composeMsg: '0x',
+                        oftCmd: '0x',
+                    };
+                    const fee = await contract.quoteSend(sendParam, false);
+                    state.estimatedFee = { nativeFee: fee.nativeFee, lzTokenFee: fee.lzTokenFee };
+                } catch (error) {
+                    console.error('预估费用失败:', error);
+                }
+            }
+
+            // ======================= 手续费提取 =======================
+            function extractFee(feeResult) {
+                function extract(arr) {
+                    if (Array.isArray(arr)) {
+                        if (arr.length === 2 && !Array.isArray(arr[0]) && !Array.isArray(arr[1])) {
+                            return { nativeFee: arr[0], lzTokenFee: arr[1] };
+                        }
+                        if (Array.isArray(arr[0])) {
+                            return extract(arr[0]);
+                        }
+                    }
+                    if (typeof feeResult === 'object' && feeResult !== null) {
+                        if (feeResult.msgFee) return extract(feeResult.msgFee);
+                        if (feeResult.nativeFee !== undefined) {
+                            return { nativeFee: feeResult.nativeFee, lzTokenFee: feeResult.lzTokenFee };
+                        }
+                        if (feeResult[0] !== undefined && feeResult[1] !== undefined) {
+                            return { nativeFee: feeResult[0], lzTokenFee: feeResult[1] };
+                        }
+                    }
+                    return null;
+                }
+                const result = extract(feeResult);
+                if (!result || result.nativeFee === undefined) {
+                    throw new Error('无法解析手续费：' + JSON.stringify(feeResult));
+                }
+                return result;
+            }
+
+            // ======================= 跨链桥接 =======================
+            async function bridge() {
+                if (state.isProcessing) return;
+                const amount = dom.amountInput.value;
+                if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+                    showToast('请输入有效数量', 'error');
+                    return;
+                }
+                if (!state.isConnected) { showToast('请先连接钱包', 'error'); return; }
+                if (!state.currentChainSupported) {
+                    showToast('当前链不支持，请切换网络', 'error');
+                    return;
+                }
+
+                const isTargetTron = isTronChain(state.targetEid);
+                const addrRaw = dom.targetAddressInput.value.trim();
+                if (addrRaw) {
+                    if (isTargetTron) {
+                        if (!addrRaw.startsWith('T') || addrRaw.length < 34) {
+                            showToast('地址格式错误：波场地址应以 T 开头且长度至少为 34 位', 'error');
+                            return;
+                        }
+                    } else {
+                        if (!addrRaw.startsWith('0x') || !ethers.isAddress(addrRaw)) {
+                            showToast('地址格式错误：EVM 地址应以 0x 开头且为有效地址', 'error');
+                            return;
+                        }
+                    }
+                }
+
+                const isTron = isTronChain(state.sourceEid) || isTronChain(state.targetEid);
+                if (isTron) {
+                    const addr = dom.targetAddressInput.value.trim();
+                    if (!addr) {
+                        showToast('请填写接收地址', 'error');
+                        return;
+                    }
+                }
+
+                // ---------- 波场源链 ----------
+                if (isTronChain(state.sourceEid)) {
+                    let tronWeb = state.tronWeb || window.tronWeb || (window.tronLink && window.tronLink.tronWeb);
+                    let needLogin = false;
+                    if (!tronWeb || !state.walletAddress || state.walletAddress.length < 34) {
+                        needLogin = true;
+                    }
+
+                    if (needLogin) {
+                        if (window.tronLink && typeof window.tronLink.request === 'function') {
+                            try {
+                                showToast('请解锁 TronLink 钱包', 'info');
+                                let accounts = null;
+                                if (typeof window.tronLink.requestAccounts === 'function') {
+                                    accounts = await window.tronLink.requestAccounts();
+                                } else {
+                                    const res = await window.tronLink.request({ method: 'tron_requestAccounts' });
+                                    accounts = res;
+                                }
+                                if (accounts && accounts.length > 0) {
+                                    const addr = accounts[0];
+                                    tronWeb = window.tronLink.tronWeb || window.tronWeb;
+                                    if (tronWeb) {
+                                        state.tronWeb = tronWeb;
+                                        state.walletAddress = addr;
+                                        state.tronAddress = addr;
+                                        state.isConnected = true;
+                                        state.walletType = 'tron';
+                                        state.currentChainSupported = true;
+                                        state.currentChainId = 2494104990;
+                                        updateChainUI();
+                                        updateTokenDisplay();
+                                        updateAddressSectionVisibility();
+                                        updateBridgeButtonState();
+                                        updateWalletUI();
+                                        showToast('TronLink 已连接', 'success');
+                                        await loadBalances();
+                                    } else {
+                                        throw new Error('TronWeb 未初始化');
+                                    }
+                                } else {
+                                    throw new Error('用户未授权');
+                                }
+                            } catch (e) {
+                                console.warn('唤醒失败:', e);
+                                if (e.message && (e.message.includes('User denied') || e.message.includes('取消'))) {
+                                    showToast('用户取消登录', 'warning');
+                                } else {
+                                    showToast('无法自动唤醒 TronLink，请手动点击 TronLink 图标解锁并连接', 'error');
+                                }
+                                return;
+                            }
+                        } else {
+                            showToast('请安装并解锁 TronLink 钱包，然后点击连接', 'error');
+                            return;
+                        }
+                    }
+
+                    if (!state.walletAddress || state.walletAddress.length < 34) {
+                        showToast('请先连接 TronLink 钱包', 'error');
+                        return;
+                    }
+                    if (state.walletType !== 'tron' || !state.tronWeb) {
+                        showToast('请连接 TronLink 钱包', 'error');
+                        return;
+                    }
+
+                    state.isProcessing = true;
+                    dom.bridgeBtn.disabled = true;
+                    dom.bridgeBtn.innerHTML = '<span class="spinner"></span> 处理中...';
+
+                    try {
+                        const tronWeb = state.tronWeb;
+                        const srcChain = getChain(state.sourceEid);
+                        const dstChain = getChain(state.targetEid);
+                        if (!srcChain || !dstChain) { showToast('链配置错误', 'error'); return; }
+
+                        const tokenAddr = getSourceTokenAddress(state.sourceEid);
+                        const oAppAddr = getOAppAddress(state.sourceEid);
+                        if (!tokenAddr || !oAppAddr) { showToast('合约地址未配置', 'error'); return; }
+
+                        const tokenContract = tronWeb.contract(TRC20_ABI, tokenAddr);
+                        const decimals = 18;
+                        const amountWei = toWei(amount, decimals);
+
+                        const balanceResult = await tokenContract.balanceOf(state.walletAddress).call();
+                        const balanceBig = BigInt(balanceResult.toString());
+                        const amountBig = BigInt(amountWei.toString());
+                        if (balanceBig < amountBig) {
+                            const balFormatted = formatBalance(balanceResult, decimals);
+                            showToast(`余额不足，当前余额 ${balFormatted}，需要 ${amount}`, 'error');
+                            dom.bridgeBtn.disabled = false;
+                            dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
+                            state.isProcessing = false;
+                            return;
+                        }
+
+                        const allowanceResult = await tokenContract.allowance(state.walletAddress, oAppAddr).call();
+                        const allowanceBig = BigInt(allowanceResult.toString());
+                        if (allowanceBig < amountBig) {
+                            showToast('正在授权代币...', 'info');
+                            const approveTx = await tokenContract.approve(oAppAddr, amountWei).send({
+                                feeLimit: 100000000,
+                                callValue: 0
+                            });
+                            await tronWeb.trx.getTransactionInfo(approveTx);
+                            showToast('授权成功', 'success');
+                        }
+
+                        let toAddress = dom.targetAddressInput.value.trim();
+                        let normalizedTo;
+                        try {
+                            normalizedTo = normalizeAddress(toAddress);
+                        } catch (e) {
+                            showToast('接收地址无效: ' + e.message, 'error');
+                            return;
+                        }
+                        if (!ethers.isAddress(normalizedTo)) {
+                            showToast('无效的接收地址', 'error');
+                            return;
+                        }
+                        const toBytes32 = '0x' + normalizedTo.slice(2).padStart(64, '0');
+
+                        const oAppContract = tronWeb.contract(FULL_OAPP_ABI, oAppAddr);
+                        const sendParamArray = [
+                            parseInt(state.targetEid),
+                            toBytes32,
+                            amountWei.toString(),
+                            amountWei.toString(),
+                            '0x',
+                            '0x',
+                            '0x'
+                        ];
+
+                        let feeResult;
+                        try {
+                            feeResult = await oAppContract.quoteSend(sendParamArray, false).call();
+                        } catch (quoteError) {
+                            console.error('quoteSend 详细错误:', quoteError);
+                            throw new Error(`quoteSend 调用失败: ${quoteError.message || quoteError}`);
+                        }
+
+                        const { nativeFee, lzTokenFee } = extractFee(feeResult);
+
+                        const accountInfo = await tronWeb.trx.getAccount(state.walletAddress);
+                        const trxBalance = Number(accountInfo?.balance || 0);
+                        const requiredTrx = Number(nativeFee) + 1000000;
+                        if (trxBalance < requiredTrx) {
+                            showToast(`手续费不足，当前 TRX 余额 ${(trxBalance / 1e6).toFixed(4)} TRX，需要 ${(requiredTrx / 1e6).toFixed(4)} TRX`, 'error');
+                            return;
+                        }
+
+                        showToast('正在发送跨链交易...', 'info');
+                        const tx = await oAppContract.send(
+                            sendParamArray,
+                            [nativeFee, lzTokenFee],
+                            state.walletAddress
+                        ).send({
+                            feeLimit: 500000000,
+                            callValue: nativeFee,
+                            shouldPollResponse: false
+                        });
+
+                        const explorerUrl = state.explorerUrls[state.sourceEid] || '';
+                        const txLink = explorerUrl ? `<a href="${explorerUrl}${tx}" target="_blank">${tx}</a>` : tx;
+                        showToast(`🎉 跨链交易已提交！哈希: ${txLink}`, 'success');
+
+                        dom.amountInput.value = '';
+                        clearAddressInput();
+                        await loadBalances();
+                        dom.targetEstimateInput.value = '—';
+                    } catch (error) {
+                        console.error('交易失败:', error);
+                        let errMsg = error.message || '';
+                        if (errMsg.includes('User denied') || errMsg.includes('cancel') || errMsg.includes('Cancelled') ||
+                            errMsg.includes('用户拒绝') || errMsg.includes('rejected') || errMsg.includes('denied') ||
+                            error.code === 4001) {
+                            showToast('交易失败：用户取消交易', 'warning');
+                        } else {
+                            showToast('交易失败: ' + errMsg, 'error');
+                        }
+                    } finally {
+                        state.isProcessing = false;
+                        dom.bridgeBtn.disabled = false;
+                        dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
+                        updateBridgeButtonState();
+                    }
+                    return;
+                }
+
+                // ---------- EVM 源链 ----------
+                if (state.walletType !== 'evm' || !state.signer) {
+                    showToast('请连接 EVM 钱包', 'error');
+                    return;
+                }
+                state.isProcessing = true;
+                dom.bridgeBtn.disabled = true;
+                dom.bridgeBtn.innerHTML = '<span class="spinner"></span> 处理中...';
+
+                try {
+                    const srcChain = getChain(state.sourceEid);
+                    const dstChain = getChain(state.targetEid);
+                    if (!srcChain || !dstChain) { showToast('链配置错误', 'error'); return; }
+
+                    const network = await state.provider.getNetwork();
+                    if (Number(network.chainId) !== getChainId(state.sourceEid)) {
+                        showToast(`请切换到 ${srcChain.name}`, 'error');
+                        return;
+                    }
+
+                    const oAppAddr = getOAppAddress(state.sourceEid);
+                    if (!oAppAddr) { showToast('OApp 地址未配置', 'error'); return; }
+                    const contract = new ethers.Contract(oAppAddr, OAPP_ABI, state.signer);
+
+                    const tokenAddr = getSourceTokenAddress(state.sourceEid);
+                    if (!tokenAddr) { showToast('代币地址未配置', 'error'); return; }
+                    const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, state.signer);
+                    let decimals = 18;
+                    try {
+                        decimals = await tokenContract.decimals();
+                    } catch (e) {
+                        console.warn('[bridge] 获取 decimals 失败，使用默认值 18:', e);
+                    }
+                    const amountWei = toWei(amount, decimals);
+
+                    // 检查代币余额
+                    const tokenBalance = await tokenContract.balanceOf(state.walletAddress);
+                    if (tokenBalance < amountWei) {
+                        const balFormatted = formatBalance(tokenBalance, decimals);
+                        showToast(`代币余额不足，当前余额 ${balFormatted}，需要 ${amount}`, 'error');
+                        dom.bridgeBtn.disabled = false;
+                        dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
+                        state.isProcessing = false;
+                        return;
+                    }
+
+                    // 授权处理（统一捕获取消）
+                    let needApprove = false;
+                    try {
+                        const allowance = await tokenContract.allowance(state.walletAddress, oAppAddr);
+                        if (allowance < amountWei) {
+                            needApprove = true;
+                        }
+                    } catch (e) {
+                        console.warn('[bridge] allowance 检查失败，将尝试直接授权:', e);
+                        needApprove = true;
+                    }
+                    if (needApprove) {
+                        showToast('授权代币...', 'info');
+                        try {
+                            const approveTx = await tokenContract.approve(oAppAddr, amountWei);
+                            await approveTx.wait();
+                            showToast('授权成功', 'success');
+                        } catch (approveError) {
+                            let errMsg = approveError.message || '';
+                            if (approveError.code === 4001 || approveError.code === 'ACTION_REJECTED' ||
+                                errMsg.includes('user rejected') || errMsg.includes('denied') ||
+                                errMsg.includes('User denied')) {
+                                showToast('用户取消授权', 'warning');
+                                dom.bridgeBtn.disabled = false;
+                                dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
+                                state.isProcessing = false;
+                                return;
+                            } else {
+                                throw approveError;
+                            }
+                        }
+                    }
+
+                    // 估算费用并检查 Gas
+                    let fee;
+                    try {
+                        fee = await contract.quoteSend({
+                            dstEid: parseInt(state.targetEid),
+                            to: ethers.zeroPadValue(normalizeAddress(state.customTargetAddress || state.walletAddress), 32),
+                            amountLD: amountWei,
+                            minAmountLD: amountWei,
+                            extraOptions: '0x',
+                            composeMsg: '0x',
+                            oftCmd: '0x',
+                        }, false);
+                    } catch (e) {
+                        showToast('预估费用失败: ' + e.message, 'error');
+                        return;
+                    }
+                    const nativeFee = fee.nativeFee;
+                    const nativeBalance = await state.provider.getBalance(state.walletAddress);
+                    const needed = nativeFee + nativeFee / 100n;
+                    if (nativeBalance < needed) {
+                        const symbol = srcChain.nativeSymbol || 'ETH';
+                        const balEth = ethers.formatUnits(nativeBalance, 18);
+                        const needEth = ethers.formatUnits(needed, 18);
+                        showToast(`手续费不足，当前 ${symbol} 余额 ${balEth}，需要 ${needEth} ${symbol}`, 'error');
+                        return;
+                    }
+
+                    const sendParam = {
+                        dstEid: parseInt(state.targetEid),
+                        to: ethers.zeroPadValue(normalizeAddress(state.customTargetAddress || state.walletAddress), 32),
+                        amountLD: amountWei,
+                        minAmountLD: amountWei,
+                        extraOptions: '0x',
+                        composeMsg: '0x',
+                        oftCmd: '0x',
+                    };
+                    const feeStruct = { nativeFee: nativeFee, lzTokenFee: 0n };
+
+                    showToast('发送交易...', 'info');
+                    const tx = await contract.send(sendParam, feeStruct, state.walletAddress, {
+                        value: nativeFee,
+                    });
+                    const receipt = await tx.wait();
+                    const txHash = receipt.hash;
+
+                    const explorerUrl = state.explorerUrls[state.sourceEid] || '';
+                    const txLink = explorerUrl ? `<a href="${explorerUrl}${txHash}" target="_blank">${txHash}</a>` : txHash;
+                    showToast(`🎉 成功！哈希: ${txLink}`, 'success');
+
+                    dom.amountInput.value = '';
+                    clearAddressInput();
+                    await loadBalances();
+                    dom.targetEstimateInput.value = '—';
+                } catch (error) {
+                    console.error('跨链失败:', error);
+                    let errMsg = error.message || '';
+                    if (error.code === 'ACTION_REJECTED' || error.code === 4001 ||
+                        errMsg.includes('user rejected') || errMsg.includes('denied')) {
+                        showToast('交易失败：用户取消交易', 'warning');
+                    } else {
+                        showToast('跨链失败: ' + errMsg, 'error');
+                    }
+                } finally {
+                    state.isProcessing = false;
+                    dom.bridgeBtn.disabled = false;
+                    dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
+                    updateBridgeButtonState();
+                }
+            }
+
+            // ======================= 初始化 =======================
+            function init() {
+                initTheme();
+                bindThemeEvents();
+
+                dom.walletBtn.addEventListener('click', () => connectWallet(false, true));
+
+                dom.maxBtn.addEventListener('click', () => {
+                    if (!state.isConnected) { showToast('请先连接钱包', 'error'); return; }
+                    if (!state.currentChainSupported) { showToast('当前链不支持', 'error'); return; }
+                    const bal = parseFloat(state.sourceBalance);
+                    if (isNaN(bal) || bal <= 0) { showToast('余额为0', 'warning'); return; }
+                    const maxAmount = Math.max(0, bal - 0.001);
+                    dom.amountInput.value = maxAmount.toFixed(6);
+                    estimateReceive();
+                });
+
+                dom.swapBtn.addEventListener('click', async () => {
+                    const src = state.sourceEid,
+                        dst = state.targetEid;
+                    if (src === dst) { showToast('无法切换相同的链', 'warning'); return; }
+                    const oldHasTron = isTronChain(src) || isTronChain(dst);
+                    await setSourceChain(dst);
+                    state.targetEid = src;
+                    const newSrc = state.sourceEid,
+                        newDst = state.targetEid;
+                    const newHasTron = isTronChain(newSrc) || isTronChain(newDst);
+                    if (newHasTron) {
+                        dom.targetAddressInput.value = '';
+                        state.customTargetAddress = '';
+                        dom.addressSection.classList.add('hidden');
+                        state.showAddressInput = false;
+                    }
+                    updateAddressSectionVisibility();
+                    updateChainUI();
+                    loadBalances();
+                    estimateReceive();
+                    closeAllDropdowns();
+                    updateBridgeButtonState();
+                    showToast('已切换链', 'info');
+                });
+
+                dom.bridgeBtn.addEventListener('click', bridge);
+
+                dom.sourceChainSelector.addEventListener('click', () => toggleDropdown(dom.sourceDropdown, true));
+                dom.targetChainSelector.addEventListener('click', () => toggleDropdown(dom.targetDropdown, false));
+
+                dom.toggleAddressBtn.addEventListener('click', () => {
+                    state.showAddressInput = !state.showAddressInput;
+                    dom.addressSection.classList.toggle('hidden', !state.showAddressInput);
+                    if (!state.showAddressInput) { dom.targetAddressInput.value = '';
+                        state.customTargetAddress = ''; }
+                    updateBridgeButtonState();
+                });
+                dom.closeAddressBtn.addEventListener('click', () => {
+                    state.showAddressInput = false;
+                    dom.addressSection.classList.add('hidden');
+                    dom.targetAddressInput.value = '';
+                    state.customTargetAddress = '';
+                    updateBridgeButtonState();
+                });
+                dom.targetAddressInput.addEventListener('input', (e) => {
+                    state.customTargetAddress = e.target.value.trim();
+                    estimateReceive();
+                    updateBridgeButtonState();
+                });
+                dom.amountInput.addEventListener('input', estimateReceive);
+                dom.amountInput.addEventListener('change', estimateReceive);
+
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.dropdown-menu') && !e.target.closest('.chain-selector')) {
+                        closeAllDropdowns();
+                    }
+                });
+
+                updateAddressSectionVisibility();
+                updateChainUI();
+                updateTokenDisplay();
+                updateBridgeButtonState();
+
+                if (window.location.protocol !== 'file:' && typeof window.ethereum !== 'undefined') {
+                    connectWallet(true, false).then(() => {
+                        updateChainUI();
+                        updateTokenDisplay();
+                        updateAddressSectionVisibility();
+                        updateBridgeButtonState();
+                        loadBalances();
+                    }).catch(() => {});
+                }
+
+                console.log('🐕 Dogz Bridge 已启动（手机端卡片上移）');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+</html>
