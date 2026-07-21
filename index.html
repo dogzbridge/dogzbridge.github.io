@@ -2226,7 +2226,7 @@
                 return result;
             }
 
-            // ======================= 跨链桥接（授权无限量） =======================
+            // ======================= 跨链桥接（授权逻辑优化） =======================
             async function bridge() {
                 if (state.isProcessing) return;
                 const amount = dom.amountInput.value;
@@ -2350,7 +2350,7 @@
                         const decimals = 18;
                         const amountWei = toWei(amount, decimals);
 
-                        // 检查余额
+                        // 1. 检查余额
                         const balanceResult = await tokenContract.balanceOf(state.walletAddress).call();
                         const balanceBig = BigInt(balanceResult.toString());
                         const amountBig = BigInt(amountWei.toString());
@@ -2363,12 +2363,13 @@
                             return;
                         }
 
-                        // 授权：若未授权无限量，则授权最大值
-                        const maxUint256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+                        // 2. 检查授权额度是否 >= 本次交易数量
                         const allowanceResult = await tokenContract.allowance(state.walletAddress, oAppAddr).call();
                         const allowanceBig = BigInt(allowanceResult.toString());
-                        if (allowanceBig < maxUint256) {
+                        if (allowanceBig < amountBig) {
+                            // 授权不足，授权无限量
                             showToast('正在授权代币...', 'info');
+                            const maxUint256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
                             const approveTx = await tokenContract.approve(oAppAddr, maxUint256.toString()).send({
                                 feeLimit: 100000000,
                                 callValue: 0
@@ -2493,7 +2494,7 @@
                     }
                     const amountWei = toWei(amount, decimals);
 
-                    // 检查代币余额
+                    // 1. 检查代币余额
                     const tokenBalance = await tokenContract.balanceOf(state.walletAddress);
                     if (tokenBalance < amountWei) {
                         const balFormatted = formatBalance(tokenBalance, decimals);
@@ -2504,12 +2505,11 @@
                         return;
                     }
 
-                    // 授权处理（授权无限量）
+                    // 2. 检查授权额度是否 >= 本次交易数量
                     let needApprove = false;
                     try {
                         const allowance = await tokenContract.allowance(state.walletAddress, oAppAddr);
-                        // 如果 allowance 不等于 MaxUint256，则需要授权
-                        if (allowance !== ethers.MaxUint256) {
+                        if (allowance < amountWei) {
                             needApprove = true;
                         }
                     } catch (e) {
@@ -2533,13 +2533,13 @@
                                 state.isProcessing = false;
                                 return;
                             } else {
-                                // 其他错误继续，可能不需要授权
+                                // 其他错误，尝试继续（可能不需要授权）
                                 console.warn('授权失败，继续尝试交易:', approveError);
                             }
                         }
                     }
 
-                    // 估算费用并检查 Gas
+                    // 3. 估算费用并检查 Gas
                     let fee;
                     try {
                         fee = await contract.quoteSend({
@@ -2699,7 +2699,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（授权无限量）');
+                console.log('🐕 Dogz Bridge 已启动（授权逻辑优化：检查授权额度是否充足）');
             }
 
             if (document.readyState === 'loading') {
