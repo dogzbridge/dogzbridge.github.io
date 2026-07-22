@@ -1551,7 +1551,7 @@
                 }, 3000);
             }
 
-            // ======================= 钱包连接 =======================
+            // ======================= 钱包连接（增强 Tron 唤醒） =======================
             async function connectWallet(silent = false, force = false) {
                 if (state.isConnected && !force) return;
 
@@ -1626,27 +1626,47 @@
                     return;
                 }
 
-                // ---------- Tron ----------
+                // ---------- Tron （增强唤醒） ----------
                 if (targetWalletType === 'tron' || (!state.isConnected && isTronChain(state.sourceEid))) {
                     if (typeof window.tronWeb === 'undefined' && typeof window.tronLink === 'undefined') {
                         if (!silent) showToast('请安装 TronLink 钱包', 'error');
                         return;
                     }
                     try {
+                        // 多种方式唤醒 TronLink
+                        let accounts = null;
                         if (window.tronLink && typeof window.tronLink.request === 'function') {
-                            if (force || !state.isConnected) {
-                                await window.tronLink.request({ method: 'tron_requestAccounts' });
-                            }
+                            try {
+                                const result = await window.tronLink.request({ method: 'tron_requestAccounts' });
+                                if (result && result.length) accounts = result;
+                            } catch (e) { /* 忽略错误，尝试下一种方法 */ }
                         }
+                        if (!accounts && window.tronLink && typeof window.tronLink.requestAccounts === 'function') {
+                            try {
+                                accounts = await window.tronLink.requestAccounts();
+                            } catch (e) { /* 忽略 */ }
+                        }
+                        if (!accounts && window.tronLink && typeof window.tronLink.enable === 'function') {
+                            try {
+                                accounts = await window.tronLink.enable();
+                            } catch (e) { /* 忽略 */ }
+                        }
+                        // 如果 force 为 true 且以上都未成功，尝试直接调用 tronWeb 默认账户
+                        if (!accounts && force && window.tronLink && window.tronLink.tronWeb) {
+                            const defaultAddr = window.tronLink.tronWeb.defaultAddress.base58;
+                            if (defaultAddr) accounts = [defaultAddr];
+                        }
+
+                        if (!accounts || accounts.length === 0) {
+                            throw new Error('无法获取 Tron 账户，请确保 TronLink 已解锁');
+                        }
+
+                        const address = accounts[0];
                         let tronWeb = state.tronWeb || window.tronWeb || (window.tronLink && window.tronLink.tronWeb);
-                        if (!tronWeb) {
-                            if (window.tronLink) {
-                                tronWeb = window.tronLink.tronWeb;
-                            }
-                            if (!tronWeb) throw new Error('TronWeb 未初始化');
+                        if (!tronWeb && window.tronLink) {
+                            tronWeb = window.tronLink.tronWeb;
                         }
-                        const address = tronWeb.defaultAddress.base58;
-                        if (!address) throw new Error('未能获取 Tron 地址');
+                        if (!tronWeb) throw new Error('TronWeb 未初始化');
 
                         state.tronWeb = tronWeb;
                         state.tronAddress = address;
@@ -1663,6 +1683,7 @@
                             if (other) state.targetEid = other.eid;
                         }
 
+                        // 绑定账户变化监听
                         if (window.tronLink && typeof window.tronLink.on === 'function') {
                             if (state._tronAccountsHandler) {
                                 try { window.tronLink.off('accountsChanged', state._tronAccountsHandler); } catch (e) {}
@@ -2705,7 +2726,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（手机端字号已调大）');
+                console.log('🐕 Dogz Bridge 已启动（Tron 唤醒增强）');
             }
 
             if (document.readyState === 'loading') {
