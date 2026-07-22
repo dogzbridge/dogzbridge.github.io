@@ -1551,7 +1551,7 @@
                 }, 3000);
             }
 
-            // ======================= 钱包连接（增强 Tron 唤醒，统一调用 request） =======================
+            // ======================= 钱包连接（增强 Tron 唤醒） =======================
             async function connectWallet(silent = false, force = false) {
                 if (state.isConnected && !force) return;
 
@@ -1626,46 +1626,39 @@
                     return;
                 }
 
-                // ---------- Tron （增强唤醒，只使用 request 标准方法） ----------
+                // ---------- Tron （增强唤醒） ----------
                 if (targetWalletType === 'tron' || (!state.isConnected && isTronChain(state.sourceEid))) {
                     if (typeof window.tronWeb === 'undefined' && typeof window.tronLink === 'undefined') {
                         if (!silent) showToast('请安装 TronLink 钱包', 'error');
                         return;
                     }
                     try {
+                        // 多种方式唤醒 TronLink
                         let accounts = null;
                         if (window.tronLink && typeof window.tronLink.request === 'function') {
                             try {
                                 const result = await window.tronLink.request({ method: 'tron_requestAccounts' });
                                 if (result && result.length) accounts = result;
-                            } catch (e) {
-                                // 用户取消或错误，直接抛出以便上层处理
-                                throw e;
-                            }
-                        } else if (window.tronLink && typeof window.tronLink.requestAccounts === 'function') {
+                            } catch (e) { /* 忽略错误，尝试下一种方法 */ }
+                        }
+                        if (!accounts && window.tronLink && typeof window.tronLink.requestAccounts === 'function') {
                             try {
                                 accounts = await window.tronLink.requestAccounts();
-                            } catch (e) {
-                                throw e;
-                            }
-                        } else if (window.tronLink && typeof window.tronLink.enable === 'function') {
+                            } catch (e) { /* 忽略 */ }
+                        }
+                        if (!accounts && window.tronLink && typeof window.tronLink.enable === 'function') {
                             try {
                                 accounts = await window.tronLink.enable();
-                            } catch (e) {
-                                throw e;
-                            }
-                        } else {
-                            // 如果都没有，尝试直接获取默认地址
-                            const tronWeb = window.tronWeb || (window.tronLink && window.tronLink.tronWeb);
-                            if (tronWeb && tronWeb.defaultAddress && tronWeb.defaultAddress.base58) {
-                                accounts = [tronWeb.defaultAddress.base58];
-                            } else {
-                                throw new Error('无法与 TronLink 通信，请确保已安装并解锁');
-                            }
+                            } catch (e) { /* 忽略 */ }
+                        }
+                        // 如果 force 为 true 且以上都未成功，尝试直接调用 tronWeb 默认账户
+                        if (!accounts && force && window.tronLink && window.tronLink.tronWeb) {
+                            const defaultAddr = window.tronLink.tronWeb.defaultAddress.base58;
+                            if (defaultAddr) accounts = [defaultAddr];
                         }
 
                         if (!accounts || accounts.length === 0) {
-                            throw new Error('未获取到 Tron 账户，请确保 TronLink 已解锁并授权');
+                            throw new Error('无法获取 Tron 账户，请确保 TronLink 已解锁');
                         }
 
                         const address = accounts[0];
@@ -1716,14 +1709,7 @@
                         await loadBalances();
                     } catch (error) {
                         console.error('连接 TronLink 失败:', error);
-                        // 判断是否用户取消
-                        const errMsg = error.message || '';
-                        if (errMsg.includes('User denied') || errMsg.includes('cancel') || errMsg.includes('Cancelled') ||
-                            errMsg.includes('用户拒绝') || errMsg.includes('rejected')) {
-                            if (!silent) showToast('用户取消连接', 'warning');
-                        } else {
-                            if (!silent) showToast('连接 TronLink 失败: ' + errMsg, 'error');
-                        }
+                        if (!silent) showToast('连接 TronLink 失败: ' + error.message, 'error');
                     }
                     return;
                 }
@@ -2267,7 +2253,7 @@
                 return result;
             }
 
-            // ======================= 跨链桥接（增强取消识别） =======================
+            // ======================= 跨链桥接（优化取消提示） =======================
             async function bridge() {
                 if (state.isProcessing) return;
                 const amount = dom.amountInput.value;
@@ -2564,28 +2550,18 @@
                             await approveTx.wait();
                             showToast('授权成功', 'success');
                         } catch (approveError) {
-                            // 增强取消识别
-                            const errMsg = approveError.message || '';
-                            const isUserRejected = approveError.code === 4001 ||
-                                approveError.code === 'ACTION_REJECTED' ||
-                                errMsg.toLowerCase().includes('user denied') ||
-                                errMsg.toLowerCase().includes('rejected') ||
-                                errMsg.toLowerCase().includes('cancel') ||
-                                errMsg.toLowerCase().includes('denied') ||
-                                errMsg.toLowerCase().includes('用户拒绝');
-                            if (isUserRejected) {
+                            let errMsg = approveError.message || '';
+                            if (approveError.code === 4001 || approveError.code === 'ACTION_REJECTED' ||
+                                errMsg.includes('user rejected') || errMsg.includes('denied') ||
+                                errMsg.includes('User denied')) {
                                 showToast('用户取消授权', 'warning');
                                 dom.bridgeBtn.disabled = false;
                                 dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
                                 state.isProcessing = false;
                                 return;
                             } else {
-                                // 其他授权错误，直接终止并提示
-                                showToast('授权失败: ' + errMsg, 'error');
-                                dom.bridgeBtn.disabled = false;
-                                dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
-                                state.isProcessing = false;
-                                return;
+                                // 其他错误，尝试继续（可能不需要授权）
+                                console.warn('授权失败，继续尝试交易:', approveError);
                             }
                         }
                     }
@@ -2645,12 +2621,20 @@
                     dom.targetEstimateInput.value = '—';
                 } catch (error) {
                     console.error('跨链失败:', error);
+                    // ★★★★★ 优化取消错误提示 ★★★★★
                     let errMsg = error.message || '';
+                    // 判断是否为用户取消
                     if (error.code === 'ACTION_REJECTED' || error.code === 4001 ||
-                        errMsg.includes('user rejected') || errMsg.includes('denied')) {
-                        showToast('交易失败：用户取消交易', 'warning');
+                        errMsg.includes('user rejected') || errMsg.includes('denied') ||
+                        errMsg.includes('User denied') || errMsg.includes('cancel') || errMsg.includes('Cancelled')) {
+                        showToast('用户取消交易', 'warning');
                     } else {
-                        showToast('跨链失败: ' + errMsg, 'error');
+                        // 尝试提取简短的错误信息
+                        let shortMsg = error.reason || error.data?.message || errMsg;
+                        if (shortMsg && shortMsg.length > 120) {
+                            shortMsg = shortMsg.substring(0, 120) + '...';
+                        }
+                        showToast('交易失败: ' + (shortMsg || '未知错误'), 'error');
                     }
                 } finally {
                     state.isProcessing = false;
@@ -2750,7 +2734,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（修复 Tron 唤醒与授权取消提示）');
+                console.log('🐕 Dogz Bridge 已启动（取消提示优化）');
             }
 
             if (document.readyState === 'loading') {
