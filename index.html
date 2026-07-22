@@ -1863,7 +1863,7 @@
                                 ${iconHtml}
                             </div>
                             <span class="item-name">${chain.name}</span>
-                            <span class="item-sub">${chain.shortName}</span>
+                            <span class="item-sub">${chain.nativeSymbol}</span>
                             ${isSelected ? '<span class="item-check"><i class="fas fa-check"></i></span>' : ''}
                         </div>
                     `;
@@ -2226,7 +2226,7 @@
                 return result;
             }
 
-            // ======================= 跨链桥接（授权逻辑优化） =======================
+            // ======================= 跨链桥接 =======================
             async function bridge() {
                 if (state.isProcessing) return;
                 const amount = dom.amountInput.value;
@@ -2699,7 +2699,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（授权逻辑优化：检查授权额度是否充足）');
+                console.log('🐕 Dogz Bridge 已启动（下拉框显示原生代币符号）');
             }
 
             if (document.readyState === 'loading') {
