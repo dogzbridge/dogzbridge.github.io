@@ -743,24 +743,27 @@
                 height: 24px;
                 font-size: 12px;
             }
+            /* 手机端链选择器字号调大，与下拉框一致 */
             .chain-selector .chain-name {
+                font-size: 14px;
                 white-space: normal;
                 overflow: visible;
-                font-size: 11px;
                 line-height: 1.2;
                 flex: 1 1 auto;
                 min-width: 0;
                 word-break: break-word;
             }
+            .chain-selector .chain-label {
+                font-size: 12px;
+                margin-left: 4px;
+                white-space: nowrap;
+            }
             .chain-selector {
                 padding: 4px 6px 4px 4px;
                 gap: 4px;
             }
-            .chain-selector .chain-label {
-                font-size: 10px;
-            }
             .chain-selector .chain-dropdown-arrow {
-                font-size: 9px;
+                font-size: 10px;
             }
             .swap-btn {
                 width: 38px;
@@ -820,7 +823,10 @@
                 height: 10px;
             }
             .chain-selector .chain-name {
-                font-size: 10px;
+                font-size: 12px;
+            }
+            .chain-selector .chain-label {
+                font-size: 11px;
             }
             .amount-input,
             .amount-input-readonly {
@@ -2699,7 +2705,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（下拉框显示原生代币符号）');
+                console.log('🐕 Dogz Bridge 已启动（手机端字号已调大）');
             }
 
             if (document.readyState === 'loading') {
