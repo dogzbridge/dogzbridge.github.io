@@ -274,7 +274,7 @@
             min-height: 44px;
         }
 
-        /* ★★★ 修改：输入框支持动态字体，固定高度 ★★★ */
+        /* 输入框动态字体 */
         .amount-input {
             background: transparent;
             border: none;
@@ -321,7 +321,6 @@
             font-weight: 400;
             font-size: 20px;
         }
-        /* 输入框右侧固定标签，flex不收缩 */
         .card-light .right-label {
             flex-shrink: 0;
             margin-left: 8px;
@@ -1749,10 +1748,8 @@
                             if (!silent) showToast('不支持当前链，请切换到支持的测试网', 'error');
                         } else {
                             state.sourceEid = eid;
-                            if (state.targetEid === eid) {
-                                const other = CHAIN_LIST.find(c => c.eid !== eid);
-                                if (other) state.targetEid = other.eid;
-                            }
+                            // ★ 强制确保目标链不同
+                            ensureTargetChainDifferent();
                             updateChainUI();
                             updateTokenDisplay();
                             updateAddressSectionVisibility();
@@ -1802,10 +1799,8 @@
                         if (!isTronChain(state.sourceEid)) {
                             state.sourceEid = '40420';
                         }
-                        if (state.targetEid === state.sourceEid) {
-                            const other = CHAIN_LIST.find(c => c.eid !== state.sourceEid);
-                            if (other) state.targetEid = other.eid;
-                        }
+                        // ★ 强制确保目标链不同
+                        ensureTargetChainDifferent();
                         if (window.tronLink && typeof window.tronLink.on === 'function') {
                             if (state._tronAccountsHandler) {
                                 try { window.tronLink.off('accountsChanged', state._tronAccountsHandler); } catch (e) {}
@@ -1944,10 +1939,7 @@
                     dom.bridgeBtn.style.cursor = 'pointer';
                     if (state.sourceEid !== eid) {
                         state.sourceEid = eid;
-                        if (state.targetEid === eid) {
-                            const other = CHAIN_LIST.find(c => c.eid !== eid);
-                            if (other) state.targetEid = other.eid;
-                        }
+                        ensureTargetChainDifferent();
                         updateChainUI();
                         updateTokenDisplay();
                         updateAddressSectionVisibility();
@@ -1956,6 +1948,26 @@
                     await loadBalances();
                 }
                 updateWalletUI();
+            }
+
+            // ======================= ★★★ 确保目标链与源链不同 ★★★ =======================
+            function ensureTargetChainDifferent() {
+                if (state.targetEid === state.sourceEid) {
+                    const other = CHAIN_LIST.find(c => c.eid !== state.sourceEid);
+                    if (other) {
+                        state.targetEid = other.eid;
+                        // 更新UI
+                        updateChainUI();
+                        updateTokenDisplay();
+                        updateAddressSectionVisibility();
+                        updateBridgeButtonState();
+                        // 重新预估
+                        estimateReceive();
+                        console.log('[ensure] 目标链已自动切换至:', other.name);
+                    } else {
+                        console.warn('[ensure] 未找到与源链不同的链');
+                    }
+                }
             }
 
             // ======================= 更新顶部钱包按钮 =======================
@@ -2058,6 +2070,7 @@
                         updateBridgeButtonState();
                         return;
                     }
+                    ensureTargetChainDifferent();
                     updateChainUI();
                     updateTokenDisplay();
                     updateAddressSectionVisibility();
@@ -2075,10 +2088,7 @@
                                 params: [{ chainId: '0x' + chain.chainId.toString(16) }],
                             });
                             state.sourceEid = eid;
-                            if (state.targetEid === eid) {
-                                const other = CHAIN_LIST.find(c => c.eid !== eid);
-                                if (other) state.targetEid = other.eid;
-                            }
+                            ensureTargetChainDifferent();
                             updateChainUI();
                             updateTokenDisplay();
                             updateAddressSectionVisibility();
@@ -2102,10 +2112,7 @@
                     }
                 }
                 state.sourceEid = eid;
-                if (state.targetEid === eid) {
-                    const other = CHAIN_LIST.find(c => c.eid !== eid);
-                    if (other) state.targetEid = other.eid;
-                }
+                ensureTargetChainDifferent();
                 updateChainUI();
                 updateTokenDisplay();
                 updateAddressSectionVisibility();
@@ -2281,7 +2288,7 @@
                 }
             }
 
-            // ★★★ 修改：minAmountLD 设为 0 ★★★
+            // ★★★ 修改：minAmountLD = 0 ★★★
             async function estimateReceive() {
                 const amount = dom.amountInput.value;
                 if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0 || !state.isConnected || !state
@@ -2331,7 +2338,7 @@
                         dstEid: parseInt(state.targetEid),
                         to: toBytes32,
                         amountLD: amountWei,
-                        minAmountLD: 0n, // ★ 修改为 0
+                        minAmountLD: 0n,
                         extraOptions: '0x',
                         composeMsg: '0x',
                         oftCmd: '0x',
@@ -2466,7 +2473,6 @@
                         }
                         const toBytes32 = '0x' + normalizedTo.slice(2).padStart(64, '0');
                         const oAppContract = tronWeb.contract(FULL_OAPP_ABI, oAppAddr);
-                        // ★ 修改 minAmountLD 为 "0"
                         const sendParamArray = [
                             parseInt(state.targetEid),
                             toBytes32,
@@ -2608,7 +2614,7 @@
                             dstEid: parseInt(state.targetEid),
                             to: toBytes,
                             amountLD: amountWei,
-                            minAmountLD: 0n, // ★ 修改为 0
+                            minAmountLD: 0n,
                             extraOptions: '0x',
                             composeMsg: '0x',
                             oftCmd: '0x',
@@ -2632,7 +2638,7 @@
                         dstEid: parseInt(state.targetEid),
                         to: ethers.zeroPadValue(normalizeAddress(state.customTargetAddress || state.walletAddress), 32),
                         amountLD: amountWei,
-                        minAmountLD: 0n, // ★ 修改为 0
+                        minAmountLD: 0n,
                         extraOptions: '0x',
                         composeMsg: '0x',
                         oftCmd: '0x',
@@ -2775,7 +2781,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（支持18位小数 + 动态字体缩放，minAmountLD=0）');
+                console.log('🐕 Dogz Bridge 已启动（支持18位小数 + 动态字体缩放，minAmountLD=0，目标链自动切换）');
             }
 
             if (document.readyState === 'loading') {
