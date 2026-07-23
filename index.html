@@ -271,28 +271,30 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            min-height: 44px;
         }
+
+        /* ★★★ 修改：输入框支持动态字体，固定高度 ★★★ */
         .amount-input {
             background: transparent;
             border: none;
             font-size: 20px;
             font-weight: 600;
             color: var(--text-primary);
-            width: 70%;
+            width: 100%;
             outline: none;
             padding: 4px 0;
+            height: 36px;
+            box-sizing: border-box;
+            min-width: 0;
+            flex: 1;
+            letter-spacing: 0.3px;
+            font-variant-numeric: tabular-nums;
         }
         .amount-input::placeholder {
             color: var(--placeholder);
             font-weight: 400;
-        }
-        .amount-input::-webkit-outer-spin-button,
-        .amount-input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        .amount-input[type="number"] {
-            -moz-appearance: textfield;
+            font-size: 20px;
         }
         .amount-input-readonly {
             background: transparent;
@@ -300,10 +302,37 @@
             font-size: 20px;
             font-weight: 600;
             color: var(--text-primary);
-            width: 70%;
+            width: 100%;
             outline: none;
             padding: 4px 0;
             cursor: default;
+            height: 36px;
+            box-sizing: border-box;
+            min-width: 0;
+            flex: 1;
+            letter-spacing: 0.3px;
+            font-variant-numeric: tabular-nums;
+            overflow: hidden;
+            text-overflow: clip;
+            white-space: nowrap;
+        }
+        .amount-input-readonly::placeholder {
+            color: var(--placeholder);
+            font-weight: 400;
+            font-size: 20px;
+        }
+        /* 输入框右侧固定标签，flex不收缩 */
+        .card-light .right-label {
+            flex-shrink: 0;
+            margin-left: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .card-light .right-label .label-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
         }
 
         .btn-primary {
@@ -345,6 +374,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            flex-shrink: 0;
         }
         .btn-outline:hover {
             background: var(--bg-hover);
@@ -734,9 +764,14 @@
             .amount-input,
             .amount-input-readonly {
                 font-size: 18px;
+                height: 32px;
+            }
+            .amount-input::placeholder {
+                font-size: 18px;
             }
             .card-light {
                 padding: 6px 10px;
+                min-height: 38px;
             }
             .chain-selector .chain-icon {
                 width: 24px;
@@ -787,6 +822,9 @@
                 padding: 12px 16px;
                 bottom: 20px;
             }
+            .card-light .right-label .label-text {
+                font-size: 11px;
+            }
         }
         @media (max-width: 380px) {
             .global-top-bar .brand {
@@ -830,6 +868,10 @@
             .amount-input,
             .amount-input-readonly {
                 font-size: 16px;
+                height: 28px;
+            }
+            .amount-input::placeholder {
+                font-size: 16px;
             }
             .token-name {
                 font-size: 13px;
@@ -844,6 +886,9 @@
             .global-footer img {
                 height: 14px;
             }
+            .card-light .right-label .label-text {
+                font-size: 10px;
+            }
         }
     </style>
 </head>
@@ -857,7 +902,6 @@
             <span>DOGZ BRIDGE</span>
         </div>
         <div class="actions">
-            <!-- 主题切换按钮 -->
             <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="切换主题">
                 <i class="fas fa-moon"></i>
             </button>
@@ -902,8 +946,8 @@
                         </div>
                     </div>
                     <div class="mt-2 card-light">
-                        <input type="number" class="amount-input" id="amountInput" placeholder="0.0" step="any" min="0" />
-                        <button class="btn-outline" id="maxBtn" style="padding:2px 8px;font-size:11px;border-radius:6px;">MAX</button>
+                        <input type="text" class="amount-input" id="amountInput" placeholder="0.0" inputmode="decimal" autocomplete="off" spellcheck="false" />
+                        <button class="btn-outline right-label" id="maxBtn" style="padding:2px 8px;font-size:11px;border-radius:6px;flex-shrink:0;margin-left:8px;">MAX</button>
                     </div>
                 </div>
 
@@ -935,7 +979,7 @@
                     </div>
                     <div class="mt-2 card-light">
                         <input type="text" class="amount-input-readonly" id="targetEstimateInput" value="—" readonly />
-                        <span style="font-size:12px;color:var(--text-muted);">≈ DOGZ</span>
+                        <span class="right-label label-text" style="flex-shrink:0;margin-left:8px;font-size:12px;color:var(--text-muted);white-space:nowrap;">≈ DOGZ</span>
                     </div>
                 </div>
 
@@ -1342,7 +1386,8 @@
                     '40420': 'https://shasta.tronscan.org/#/transaction/'
                 },
                 _tronAccountsHandler: null,
-                _systemThemeListener: null
+                _systemThemeListener: null,
+                _currentFontSize: 20,
             };
 
             function getChain(eid) { return CHAINS[eid]; }
@@ -1375,17 +1420,14 @@
                 return addr.slice(0, 6) + '...' + addr.slice(-4);
             }
 
-            // ★★★ 修改：精确显示余额，去掉末尾零，保留所有非零小数位 ★★★
             function formatBalance(bn, decimals = 18) {
                 if (!bn) return '0.00';
                 try {
                     const val = ethers.formatUnits(bn, decimals);
-                    // 去除末尾的零，如果小数点后全为零则去掉小数点
                     let str = val;
                     if (str.includes('.')) {
                         str = str.replace(/\.?0+$/, '');
                     }
-                    // 如果字符串为空或只剩小数点，返回 "0"
                     if (str === '' || str === '.') str = '0';
                     return str;
                 } catch { return '0.00'; }
@@ -1409,7 +1451,7 @@
                 window.toastTimer = setTimeout(() => toast.classList.add('hidden'), 10000);
             }
 
-            // ======================= 主题（精简版 + 太阳 SVG） =======================
+            // ======================= 主题 =======================
             const SUN_SVG =
                 `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5" fill="currentColor"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>`;
 
@@ -1423,7 +1465,6 @@
             function setTheme(mode) {
                 state.theme = mode;
                 localStorage.setItem('bridge-theme', mode);
-
                 if (state._systemThemeListener) {
                     try {
                         window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', state
@@ -1431,7 +1472,6 @@
                     } catch (e) {}
                     state._systemThemeListener = null;
                 }
-
                 if (mode === 'auto') {
                     const listener = (e) => {
                         const effective = e.matches ? 'dark' : 'light';
@@ -1458,7 +1498,6 @@
                 dom.app.classList.add(effectiveMode);
                 document.documentElement.style.background = 'var(--bg-primary)';
                 document.body.style.background = 'var(--bg-primary)';
-
                 if (effectiveMode === 'dark') {
                     if (dom.logoImg) dom.logoImg.src =
                     'https://imglink.cc/cdn/QdtBrP0I1O.png';
@@ -1498,11 +1537,126 @@
                         setTheme(state.theme === 'light' ? 'dark' : 'light');
                     }
                 });
-
                 dom.themeToggleBtn.addEventListener('dblclick', () => {
                     setTheme('auto');
                     showToast('已切换为自动主题', 'info');
                 });
+            }
+
+            // ======================= ★★★ 核心：输入验证 + 动态字体大小 ★★★ =======================
+            let _measureCanvas = null;
+
+            function getMeasureCanvas() {
+                if (!_measureCanvas) {
+                    _measureCanvas = document.createElement('canvas');
+                    _measureCanvas.width = 1;
+                    _measureCanvas.height = 1;
+                }
+                return _measureCanvas;
+            }
+
+            function measureTextWidth(text, fontSize, fontFamily = 'Inter, sans-serif', fontWeight = '600') {
+                const canvas = getMeasureCanvas();
+                const ctx = canvas.getContext('2d');
+                ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+                return ctx.measureText(text).width;
+            }
+
+            function sanitizeAmountInput(raw) {
+                let cleaned = raw.replace(/[^0-9.]/g, '');
+                if (cleaned === '') return '';
+                const parts = cleaned.split('.');
+                if (parts.length > 2) {
+                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                }
+                const dotIndex = cleaned.indexOf('.');
+                if (dotIndex !== -1) {
+                    const integerPart = cleaned.slice(0, dotIndex);
+                    let decimalPart = cleaned.slice(dotIndex + 1);
+                    if (decimalPart.length > 18) {
+                        decimalPart = decimalPart.slice(0, 18);
+                    }
+                    cleaned = integerPart + '.' + decimalPart;
+                }
+                if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.' && cleaned[1] !== '') {
+                    let idx = 0;
+                    while (idx < cleaned.length && cleaned[idx] === '0' && idx + 1 < cleaned.length && cleaned[idx + 1] !==
+                        '.') {
+                        idx++;
+                    }
+                    if (idx > 0) {
+                        cleaned = cleaned.slice(idx);
+                        if (cleaned === '') cleaned = '0';
+                    }
+                }
+                return cleaned;
+            }
+
+            function adjustInputFontSize(input, maxWidth, rightLabelWidth = 0) {
+                if (!input) return;
+                const text = input.value || input.placeholder || '';
+                if (text === '') {
+                    input.style.fontSize = '20px';
+                    state._currentFontSize = 20;
+                    return;
+                }
+                const rect = input.getBoundingClientRect();
+                const computedStyle = getComputedStyle(input);
+                const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+                const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+                const availableWidth = rect.width - paddingLeft - paddingRight - rightLabelWidth - 4;
+                if (availableWidth <= 0) {
+                    input.style.fontSize = '10px';
+                    state._currentFontSize = 10;
+                    return;
+                }
+                const fontFamily = computedStyle.fontFamily || 'Inter, sans-serif';
+                const fontWeight = computedStyle.fontWeight || '600';
+                let low = 6,
+                    high = 20;
+                let bestSize = 20;
+                while (low <= high) {
+                    const mid = Math.floor((low + high) / 2);
+                    const width = measureTextWidth(text, mid, fontFamily, fontWeight);
+                    if (width <= availableWidth) {
+                        bestSize = mid;
+                        low = mid + 1;
+                    } else {
+                        high = mid - 1;
+                    }
+                }
+                bestSize = Math.max(bestSize, 6);
+                bestSize = Math.min(bestSize, 20);
+                input.style.fontSize = bestSize + 'px';
+                state._currentFontSize = bestSize;
+                return bestSize;
+            }
+
+            function handleAmountInput(e) {
+                const input = dom.amountInput;
+                const raw = input.value;
+                const sanitized = sanitizeAmountInput(raw);
+                if (sanitized !== raw) {
+                    const cursorPos = input.selectionStart;
+                    input.value = sanitized;
+                    if (cursorPos !== null && cursorPos <= sanitized.length) {
+                        input.setSelectionRange(cursorPos, cursorPos);
+                    } else {
+                        input.setSelectionRange(sanitized.length, sanitized.length);
+                    }
+                }
+                adjustInputFontSize(input, 0, 50);
+                estimateReceive();
+                updateBridgeButtonState();
+            }
+
+            function syncTargetFontSize() {
+                const src = dom.amountInput;
+                const target = dom.targetEstimateInput;
+                if (src && target) {
+                    const srcFontSize = src.style.fontSize || '20px';
+                    target.style.fontSize = srcFontSize;
+                }
             }
 
             // ======================= Tron 账户变化监听 =======================
@@ -1555,15 +1709,13 @@
                 }, 3000);
             }
 
-            // ======================= 钱包连接（使用旧版可靠唤醒方式） =======================
+            // ======================= 钱包连接 =======================
             async function connectWallet(silent = false, force = false) {
                 if (state.isConnected && !force) return;
-
                 let targetWalletType = state.walletType;
                 if (!state.isConnected) {
                     targetWalletType = isTronChain(state.sourceEid) ? 'tron' : 'evm';
                 }
-
                 // ---------- EVM ----------
                 if (targetWalletType === 'evm' || (!state.isConnected && !isTronChain(state.sourceEid))) {
                     if (typeof window.ethereum === 'undefined') {
@@ -1585,14 +1737,12 @@
                         const address = await signer.getAddress();
                         const network = await provider.getNetwork();
                         const chainId = Number(network.chainId);
-
                         state.provider = provider;
                         state.signer = signer;
                         state.walletAddress = address;
                         state.isConnected = true;
                         state.walletType = 'evm';
                         state.currentChainId = chainId;
-
                         const eid = findEidByChainId(chainId);
                         state.currentChainSupported = !!eid;
                         if (!state.currentChainSupported) {
@@ -1608,7 +1758,6 @@
                             updateAddressSectionVisibility();
                             updateBridgeButtonState();
                         }
-
                         if (window._chainChangedHandler) {
                             window.ethereum.removeListener('chainChanged', window._chainChangedHandler);
                         }
@@ -1619,7 +1768,6 @@
                         window._accountsChangedHandler = handleAccountsChanged;
                         window.ethereum.on('chainChanged', window._chainChangedHandler);
                         window.ethereum.on('accountsChanged', window._accountsChangedHandler);
-
                         updateWalletUI();
                         await loadBalances();
                         if (!silent) showToast('钱包已连接', 'success');
@@ -1629,7 +1777,6 @@
                     }
                     return;
                 }
-
                 // ---------- Tron ----------
                 if (targetWalletType === 'tron' || (!state.isConnected && isTronChain(state.sourceEid))) {
                     if (typeof window.tronWeb === 'undefined' && typeof window.tronLink === 'undefined') {
@@ -1645,7 +1792,6 @@
                         if (!tronWeb) throw new Error('TronWeb 未初始化');
                         const address = tronWeb.defaultAddress.base58;
                         if (!address) throw new Error('未能获取 Tron 地址');
-
                         state.tronWeb = tronWeb;
                         state.tronAddress = address;
                         state.walletAddress = address;
@@ -1660,7 +1806,6 @@
                             const other = CHAIN_LIST.find(c => c.eid !== state.sourceEid);
                             if (other) state.targetEid = other.eid;
                         }
-
                         if (window.tronLink && typeof window.tronLink.on === 'function') {
                             if (state._tronAccountsHandler) {
                                 try { window.tronLink.off('accountsChanged', state._tronAccountsHandler); } catch (e) {}
@@ -1678,7 +1823,6 @@
                             console.log('[Tron] 已绑定 accountChanged 监听 (tronWeb)');
                         }
                         startTronPolling();
-
                         updateChainUI();
                         updateTokenDisplay();
                         updateAddressSectionVisibility();
@@ -1692,7 +1836,6 @@
                     }
                     return;
                 }
-
                 if (!silent) showToast('无法识别钱包类型', 'error');
             }
 
@@ -1711,7 +1854,6 @@
                     clearInterval(tronPollingInterval);
                     tronPollingInterval = null;
                 }
-
                 if (window.ethereum && window._chainChangedHandler) {
                     try {
                         window.ethereum.removeListener('chainChanged', window._chainChangedHandler);
@@ -1720,7 +1862,6 @@
                 }
                 window._chainChangedHandler = null;
                 window._accountsChangedHandler = null;
-
                 state.isConnected = false;
                 state.walletAddress = null;
                 state.provider = null;
@@ -1741,6 +1882,7 @@
                 updateWalletUI();
                 dom.sourceBalance.textContent = '0.00';
                 dom.targetEstimateInput.value = '—';
+                dom.targetEstimateInput.style.fontSize = '20px';
                 showToast('已断开', 'info');
             }
 
@@ -1778,7 +1920,6 @@
                     console.log('[handleChainChanged] 忽略链切换事件，当前钱包类型为:', state.walletType);
                     return;
                 }
-
                 chainId = parseInt(chainId);
                 state.currentChainId = chainId;
                 if (typeof window.ethereum !== 'undefined') {
@@ -1790,7 +1931,6 @@
                         console.warn('更新 provider 失败:', e);
                     }
                 }
-
                 const eid = findEidByChainId(chainId);
                 state.currentChainSupported = !!eid;
                 if (!state.currentChainSupported) {
@@ -1823,7 +1963,6 @@
                 const btn = dom.walletBtn;
                 const wrap = dom.walletIconWrap;
                 const statusText = dom.walletStatus;
-
                 if (state.isConnected && state.walletAddress) {
                     let chain;
                     if (state.walletType === 'tron') {
@@ -1908,7 +2047,6 @@
                 const oldEid = state.sourceEid;
                 const targetIsTron = isTronChain(eid);
                 const currentIsTron = state.walletType === 'tron';
-
                 if (state.isConnected && targetIsTron !== currentIsTron) {
                     disconnectWallet();
                     state.sourceEid = eid;
@@ -1928,7 +2066,6 @@
                     closeAllDropdowns();
                     return;
                 }
-
                 if (!targetIsTron && state.isConnected && state.walletType === 'evm') {
                     const chain = getChain(eid);
                     if (chain && chain.chainId !== state.currentChainId) {
@@ -1964,7 +2101,6 @@
                         }
                     }
                 }
-
                 state.sourceEid = eid;
                 if (state.targetEid === eid) {
                     const other = CHAIN_LIST.find(c => c.eid !== eid);
@@ -2076,7 +2212,6 @@
                 const dstChain = getChain(state.targetEid);
                 dom.sourceTokenSymbol.textContent = srcChain ? srcChain.shortName : 'DOGZ';
                 dom.targetTokenSymbol.textContent = dstChain ? dstChain.shortName : 'DOGZ';
-
                 if (srcChain) {
                     const badgeHtml = srcChain.iconUrl ?
                         `<img src="${srcChain.iconUrl}" alt="${srcChain.shortName}" />` :
@@ -2146,16 +2281,21 @@
                 }
             }
 
+            // ★★★ 修改：minAmountLD 设为 0 ★★★
             async function estimateReceive() {
                 const amount = dom.amountInput.value;
                 if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0 || !state.isConnected || !state
                     .currentChainSupported) {
                     dom.targetEstimateInput.value = '—';
                     state.targetEstimate = null;
+                    dom.targetEstimateInput.style.fontSize = '20px';
+                    syncTargetFontSize();
                     return;
                 }
                 dom.targetEstimateInput.value = amount;
                 state.targetEstimate = parseFloat(amount);
+                syncTargetFontSize();
+
                 if (isTronChain(state.sourceEid)) return;
 
                 try {
@@ -2191,7 +2331,7 @@
                         dstEid: parseInt(state.targetEid),
                         to: toBytes32,
                         amountLD: amountWei,
-                        minAmountLD: amountWei,
+                        minAmountLD: 0n, // ★ 修改为 0
                         extraOptions: '0x',
                         composeMsg: '0x',
                         oftCmd: '0x',
@@ -2245,7 +2385,6 @@
                     showToast('当前链不支持，请切换网络', 'error');
                     return;
                 }
-
                 const isTargetTron = isTronChain(state.targetEid);
                 const addrRaw = dom.targetAddressInput.value.trim();
                 if (addrRaw) {
@@ -2261,7 +2400,6 @@
                         }
                     }
                 }
-
                 const isTron = isTronChain(state.sourceEid) || isTronChain(state.targetEid);
                 if (isTron) {
                     const addr = dom.targetAddressInput.value.trim();
@@ -2280,22 +2418,17 @@
                     state.isProcessing = true;
                     dom.bridgeBtn.disabled = true;
                     dom.bridgeBtn.innerHTML = '<span class="spinner"></span> 处理中...';
-
                     try {
                         const tronWeb = state.tronWeb;
                         const srcChain = getChain(state.sourceEid);
                         const dstChain = getChain(state.targetEid);
                         if (!srcChain || !dstChain) { showToast('链配置错误', 'error'); return; }
-
                         const tokenAddr = getSourceTokenAddress(state.sourceEid);
                         const oAppAddr = getOAppAddress(state.sourceEid);
                         if (!tokenAddr || !oAppAddr) { showToast('合约地址未配置', 'error'); return; }
-
                         const tokenContract = tronWeb.contract(TRC20_ABI, tokenAddr);
                         const decimals = 18;
                         const amountWei = toWei(amount, decimals);
-
-                        // 1. 检查余额
                         const balanceResult = await tokenContract.balanceOf(state.walletAddress).call();
                         const balanceBig = BigInt(balanceResult.toString());
                         const amountBig = BigInt(amountWei.toString());
@@ -2307,12 +2440,9 @@
                             state.isProcessing = false;
                             return;
                         }
-
-                        // 2. 检查授权额度是否 >= 本次交易数量
                         const allowanceResult = await tokenContract.allowance(state.walletAddress, oAppAddr).call();
                         const allowanceBig = BigInt(allowanceResult.toString());
                         if (allowanceBig < amountBig) {
-                            // 授权不足，授权无限量
                             showToast('正在授权代币...', 'info');
                             const maxUint256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
                             const approveTx = await tokenContract.approve(oAppAddr, maxUint256.toString()).send({
@@ -2322,7 +2452,6 @@
                             await tronWeb.trx.getTransactionInfo(approveTx);
                             showToast('授权成功', 'success');
                         }
-
                         let toAddress = dom.targetAddressInput.value.trim();
                         let normalizedTo;
                         try {
@@ -2336,18 +2465,17 @@
                             return;
                         }
                         const toBytes32 = '0x' + normalizedTo.slice(2).padStart(64, '0');
-
                         const oAppContract = tronWeb.contract(FULL_OAPP_ABI, oAppAddr);
+                        // ★ 修改 minAmountLD 为 "0"
                         const sendParamArray = [
                             parseInt(state.targetEid),
                             toBytes32,
                             amountWei.toString(),
-                            amountWei.toString(),
+                            "0", // minAmountLD = 0
                             '0x',
                             '0x',
                             '0x'
                         ];
-
                         let feeResult;
                         try {
                             feeResult = await oAppContract.quoteSend(sendParamArray, false).call();
@@ -2355,9 +2483,7 @@
                             console.error('quoteSend 详细错误:', quoteError);
                             throw new Error(`quoteSend 调用失败: ${quoteError.message || quoteError}`);
                         }
-
                         const { nativeFee, lzTokenFee } = extractFee(feeResult);
-
                         const accountInfo = await tronWeb.trx.getAccount(state.walletAddress);
                         const trxBalance = Number(accountInfo?.balance || 0);
                         const requiredTrx = Number(nativeFee) + 1000000;
@@ -2365,7 +2491,6 @@
                             showToast(`手续费不足，当前 TRX 余额 ${(trxBalance / 1e6).toFixed(4)} TRX，需要 ${(requiredTrx / 1e6).toFixed(4)} TRX`, 'error');
                             return;
                         }
-
                         showToast('正在发送跨链交易...', 'info');
                         const tx = await oAppContract.send(
                             sendParamArray,
@@ -2376,15 +2501,14 @@
                             callValue: nativeFee,
                             shouldPollResponse: false
                         });
-
                         const explorerUrl = state.explorerUrls[state.sourceEid] || '';
                         const txLink = explorerUrl ? `<a href="${explorerUrl}${tx}" target="_blank">${tx}</a>` : tx;
                         showToast(`🎉 跨链交易已提交！哈希: ${txLink}`, 'success');
-
                         dom.amountInput.value = '';
                         clearAddressInput();
                         await loadBalances();
                         dom.targetEstimateInput.value = '—';
+                        dom.targetEstimateInput.style.fontSize = '20px';
                     } catch (error) {
                         console.error('交易失败:', error);
                         let errMsg = error.message || '';
@@ -2412,22 +2536,18 @@
                 state.isProcessing = true;
                 dom.bridgeBtn.disabled = true;
                 dom.bridgeBtn.innerHTML = '<span class="spinner"></span> 处理中...';
-
                 try {
                     const srcChain = getChain(state.sourceEid);
                     const dstChain = getChain(state.targetEid);
                     if (!srcChain || !dstChain) { showToast('链配置错误', 'error'); return; }
-
                     const network = await state.provider.getNetwork();
                     if (Number(network.chainId) !== getChainId(state.sourceEid)) {
                         showToast(`请切换到 ${srcChain.name}`, 'error');
                         return;
                     }
-
                     const oAppAddr = getOAppAddress(state.sourceEid);
                     if (!oAppAddr) { showToast('OApp 地址未配置', 'error'); return; }
                     const contract = new ethers.Contract(oAppAddr, OAPP_ABI, state.signer);
-
                     const tokenAddr = getSourceTokenAddress(state.sourceEid);
                     if (!tokenAddr) { showToast('代币地址未配置', 'error'); return; }
                     const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, state.signer);
@@ -2438,8 +2558,6 @@
                         console.warn('[bridge] 获取 decimals 失败，使用默认值 18:', e);
                     }
                     const amountWei = toWei(amount, decimals);
-
-                    // 1. 检查代币余额
                     const tokenBalance = await tokenContract.balanceOf(state.walletAddress);
                     if (tokenBalance < amountWei) {
                         const balFormatted = formatBalance(tokenBalance, decimals);
@@ -2449,8 +2567,6 @@
                         state.isProcessing = false;
                         return;
                     }
-
-                    // 授权逻辑：仅当源链是以太坊时才检查授权
                     if (state.sourceEid === '40161') {
                         let needApprove = false;
                         try {
@@ -2479,25 +2595,25 @@
                                     state.isProcessing = false;
                                     return;
                                 } else {
-                                    // 其他错误，继续尝试（可能不需要授权）
                                     console.warn('授权失败，继续尝试交易:', approveError);
                                 }
                             }
                         }
                     }
-
-                    // 3. 估算费用并检查 Gas
                     let fee;
                     try {
-                        fee = await contract.quoteSend({
+                        const toAddr = state.customTargetAddress || state.walletAddress;
+                        const toBytes = ethers.zeroPadValue(normalizeAddress(toAddr), 32);
+                        const sendParam = {
                             dstEid: parseInt(state.targetEid),
-                            to: ethers.zeroPadValue(normalizeAddress(state.customTargetAddress || state.walletAddress), 32),
+                            to: toBytes,
                             amountLD: amountWei,
-                            minAmountLD: amountWei,
+                            minAmountLD: 0n, // ★ 修改为 0
                             extraOptions: '0x',
                             composeMsg: '0x',
                             oftCmd: '0x',
-                        }, false);
+                        };
+                        fee = await contract.quoteSend(sendParam, false);
                     } catch (e) {
                         showToast('预估费用失败: ' + e.message, 'error');
                         return;
@@ -2512,33 +2628,30 @@
                         showToast(`手续费不足，当前 ${symbol} 余额 ${balEth}，需要 ${needEth} ${symbol}`, 'error');
                         return;
                     }
-
                     const sendParam = {
                         dstEid: parseInt(state.targetEid),
                         to: ethers.zeroPadValue(normalizeAddress(state.customTargetAddress || state.walletAddress), 32),
                         amountLD: amountWei,
-                        minAmountLD: amountWei,
+                        minAmountLD: 0n, // ★ 修改为 0
                         extraOptions: '0x',
                         composeMsg: '0x',
                         oftCmd: '0x',
                     };
                     const feeStruct = { nativeFee: nativeFee, lzTokenFee: 0n };
-
                     showToast('发送交易...', 'info');
                     const tx = await contract.send(sendParam, feeStruct, state.walletAddress, {
                         value: nativeFee,
                     });
                     const receipt = await tx.wait();
                     const txHash = receipt.hash;
-
                     const explorerUrl = state.explorerUrls[state.sourceEid] || '';
                     const txLink = explorerUrl ? `<a href="${explorerUrl}${txHash}" target="_blank">${txHash}</a>` : txHash;
                     showToast(`🎉 成功！哈希: ${txLink}`, 'success');
-
                     dom.amountInput.value = '';
                     clearAddressInput();
                     await loadBalances();
                     dom.targetEstimateInput.value = '—';
+                    dom.targetEstimateInput.style.fontSize = '20px';
                 } catch (error) {
                     console.error('跨链失败:', error);
                     let errMsg = error.message || '';
@@ -2574,7 +2687,14 @@
                     const bal = parseFloat(state.sourceBalance);
                     if (isNaN(bal) || bal <= 0) { showToast('余额为0', 'warning'); return; }
                     const maxAmount = Math.max(0, bal - 0.001);
-                    dom.amountInput.value = maxAmount.toFixed(6);
+                    let maxStr = maxAmount.toString();
+                    const dotIdx = maxStr.indexOf('.');
+                    if (dotIdx !== -1 && maxStr.length - dotIdx - 1 > 18) {
+                        maxStr = maxStr.slice(0, dotIdx + 19);
+                    }
+                    dom.amountInput.value = maxStr;
+                    const evt = new Event('input', { bubbles: true });
+                    dom.amountInput.dispatchEvent(evt);
                     estimateReceive();
                 });
 
@@ -2627,8 +2747,12 @@
                     estimateReceive();
                     updateBridgeButtonState();
                 });
-                dom.amountInput.addEventListener('input', estimateReceive);
-                dom.amountInput.addEventListener('change', estimateReceive);
+
+                dom.amountInput.addEventListener('input', handleAmountInput);
+                dom.amountInput.addEventListener('blur', () => {
+                    adjustInputFontSize(dom.amountInput, 0, 50);
+                    syncTargetFontSize();
+                });
 
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.dropdown-menu') && !e.target.closest('.chain-selector')) {
@@ -2651,7 +2775,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（余额显示精确去零）');
+                console.log('🐕 Dogz Bridge 已启动（支持18位小数 + 动态字体缩放，minAmountLD=0）');
             }
 
             if (document.readyState === 'loading') {
