@@ -1551,7 +1551,7 @@
                 }, 3000);
             }
 
-            // ======================= 钱包连接（大幅优化 Tron 唤醒） =======================
+            // ======================= 钱包连接（Tron 唤醒强化） =======================
             async function connectWallet(silent = false, force = false) {
                 if (state.isConnected && !force) return;
 
@@ -1626,102 +1626,79 @@
                     return;
                 }
 
-                // ---------- Tron（强制唤醒，无论是否已连接，只要 force 为 true 都重新请求） ----------
+                // ---------- Tron（强制唤醒） ----------
                 if (targetWalletType === 'tron' || (!state.isConnected && isTronChain(state.sourceEid))) {
                     if (typeof window.tronWeb === 'undefined' && typeof window.tronLink === 'undefined') {
                         if (!silent) showToast('请安装 TronLink 钱包', 'error');
                         return;
                     }
                     try {
-                        // 确保使用 window.tronLink 或 window.tronWeb
+                        // 先确保 tronWeb 存在
                         let tronWeb = state.tronWeb || window.tronWeb || (window.tronLink && window.tronLink.tronWeb);
                         if (!tronWeb && window.tronLink) {
                             tronWeb = window.tronLink.tronWeb;
                         }
-                        if (!tronWeb) {
-                            // 如果 tronWeb 不可用，尝试重新获取
+                        // 如果 force 为 true 或未连接，强制请求账户
+                        if (force || !state.isConnected) {
                             if (window.tronLink && typeof window.tronLink.request === 'function') {
-                                await window.tronLink.request({ method: 'tron_requestAccounts' });
-                                tronWeb = window.tronLink.tronWeb || window.tronWeb;
-                            }
-                            if (!tronWeb) throw new Error('TronWeb 未初始化');
-                        }
-
-                        // ★★★ 核心：强制调用 request 唤醒 TronLink ★★★
-                        let accounts = null;
-                        if (window.tronLink && typeof window.tronLink.request === 'function') {
-                            try {
                                 const result = await window.tronLink.request({ method: 'tron_requestAccounts' });
-                                if (result && result.length) accounts = result;
-                            } catch (e) {
-                                console.warn('tron_requestAccounts 失败:', e);
-                            }
-                        }
-                        // 如果上面失败，尝试其他方法
-                        if (!accounts && window.tronLink && typeof window.tronLink.requestAccounts === 'function') {
-                            try {
-                                accounts = await window.tronLink.requestAccounts();
-                            } catch (e) { /* 忽略 */ }
-                        }
-                        if (!accounts && window.tronLink && typeof window.tronLink.enable === 'function') {
-                            try {
-                                accounts = await window.tronLink.enable();
-                            } catch (e) { /* 忽略 */ }
-                        }
-                        // 如果 force 为 true 且仍未获取到账户，尝试直接获取默认账户（可能已登录但未连接）
-                        if (!accounts && force && tronWeb) {
-                            try {
-                                const defaultAddr = tronWeb.defaultAddress.base58;
-                                if (defaultAddr) accounts = [defaultAddr];
-                            } catch (e) { /* 忽略 */ }
-                        }
+                                if (result && result.length) {
+                                    // 成功获取账户
+                                    const addr = result[0];
+                                    // 更新 tronWeb
+                                    tronWeb = window.tronLink.tronWeb || window.tronWeb;
+                                    if (!tronWeb) throw new Error('TronWeb 未初始化');
 
-                        if (!accounts || accounts.length === 0) {
-                            // 如果用户取消或未授权，不要抛出错误，只给出提示
-                            if (!silent) showToast('未获取到 Tron 账户，请确保 TronLink 已解锁并授权', 'warning');
+                                    state.tronWeb = tronWeb;
+                                    state.tronAddress = addr;
+                                    state.walletAddress = addr;
+                                    state.isConnected = true;
+                                    state.walletType = 'tron';
+                                    state.currentChainSupported = true;
+                                    state.currentChainId = 2494104990;
+                                    if (!isTronChain(state.sourceEid)) {
+                                        state.sourceEid = '40420';
+                                    }
+                                    if (state.targetEid === state.sourceEid) {
+                                        const other = CHAIN_LIST.find(c => c.eid !== state.sourceEid);
+                                        if (other) state.targetEid = other.eid;
+                                    }
+
+                                    // 绑定监听
+                                    if (window.tronLink && typeof window.tronLink.on === 'function') {
+                                        if (state._tronAccountsHandler) {
+                                            try { window.tronLink.off('accountsChanged', state._tronAccountsHandler); } catch (e) {}
+                                        }
+                                        state._tronAccountsHandler = handleTronAccountsChanged;
+                                        window.tronLink.on('accountsChanged', state._tronAccountsHandler);
+                                    }
+                                    if (tronWeb && typeof tronWeb.on === 'function') {
+                                        if (state._tronAccountsHandler) {
+                                            try { tronWeb.off('accountChanged', state._tronAccountsHandler); } catch (e) {}
+                                        }
+                                        state._tronAccountsHandler = handleTronAccountsChanged;
+                                        tronWeb.on('accountChanged', state._tronAccountsHandler);
+                                    }
+                                    startTronPolling();
+
+                                    updateChainUI();
+                                    updateTokenDisplay();
+                                    updateAddressSectionVisibility();
+                                    updateBridgeButtonState();
+                                    updateWalletUI();
+                                    if (!silent) showToast('TronLink 已连接', 'success');
+                                    await loadBalances();
+                                    return;
+                                } else {
+                                    throw new Error('未获取到账户');
+                                }
+                            } else {
+                                throw new Error('TronLink.request 不可用');
+                            }
+                        } else {
+                            // 如果已连接且不强制，直接返回
                             return;
                         }
-
-                        const address = accounts[0];
-                        state.tronWeb = tronWeb;
-                        state.tronAddress = address;
-                        state.walletAddress = address;
-                        state.isConnected = true;
-                        state.walletType = 'tron';
-                        state.currentChainSupported = true;
-                        state.currentChainId = 2494104990;
-                        if (!isTronChain(state.sourceEid)) {
-                            state.sourceEid = '40420';
-                        }
-                        if (state.targetEid === state.sourceEid) {
-                            const other = CHAIN_LIST.find(c => c.eid !== state.sourceEid);
-                            if (other) state.targetEid = other.eid;
-                        }
-
-                        // 绑定账户变化监听
-                        if (window.tronLink && typeof window.tronLink.on === 'function') {
-                            if (state._tronAccountsHandler) {
-                                try { window.tronLink.off('accountsChanged', state._tronAccountsHandler); } catch (e) {}
-                            }
-                            state._tronAccountsHandler = handleTronAccountsChanged;
-                            window.tronLink.on('accountsChanged', state._tronAccountsHandler);
-                        }
-                        if (tronWeb && typeof tronWeb.on === 'function') {
-                            if (state._tronAccountsHandler) {
-                                try { tronWeb.off('accountChanged', state._tronAccountsHandler); } catch (e) {}
-                            }
-                            state._tronAccountsHandler = handleTronAccountsChanged;
-                            tronWeb.on('accountChanged', state._tronAccountsHandler);
-                        }
-                        startTronPolling();
-
-                        updateChainUI();
-                        updateTokenDisplay();
-                        updateAddressSectionVisibility();
-                        updateBridgeButtonState();
-                        updateWalletUI();
-                        if (!silent) showToast('TronLink 已连接', 'success');
-                        await loadBalances();
                     } catch (error) {
                         console.error('连接 TronLink 失败:', error);
                         if (!silent) showToast('连接 TronLink 失败: ' + error.message, 'error');
@@ -2268,7 +2245,7 @@
                 return result;
             }
 
-            // ======================= 跨链桥接 =======================
+            // ======================= 跨链桥接（优化授权逻辑） =======================
             async function bridge() {
                 if (state.isProcessing) return;
                 const amount = dom.amountInput.value;
@@ -2547,38 +2524,44 @@
                         return;
                     }
 
-                    // 2. 检查授权额度是否 >= 本次交易数量
-                    let needApprove = false;
-                    try {
-                        const allowance = await tokenContract.allowance(state.walletAddress, oAppAddr);
-                        if (allowance < amountWei) {
+                    // ===== 授权逻辑：仅当源链是以太坊（原生链）时才检查授权 =====
+                    if (state.sourceEid === '40161') {
+                        // 检查授权额度是否 >= 本次交易数量
+                        let needApprove = false;
+                        try {
+                            const allowance = await tokenContract.allowance(state.walletAddress, oAppAddr);
+                            if (allowance < amountWei) {
+                                needApprove = true;
+                            }
+                        } catch (e) {
+                            console.warn('[bridge] allowance 检查失败，将尝试直接授权:', e);
                             needApprove = true;
                         }
-                    } catch (e) {
-                        console.warn('[bridge] allowance 检查失败，将尝试直接授权:', e);
-                        needApprove = true;
-                    }
-                    if (needApprove) {
-                        showToast('授权代币...', 'info');
-                        try {
-                            const approveTx = await tokenContract.approve(oAppAddr, ethers.MaxUint256);
-                            await approveTx.wait();
-                            showToast('授权成功', 'success');
-                        } catch (approveError) {
-                            let errMsg = approveError.message || '';
-                            if (approveError.code === 4001 || approveError.code === 'ACTION_REJECTED' ||
-                                errMsg.includes('user rejected') || errMsg.includes('denied') ||
-                                errMsg.includes('User denied')) {
-                                showToast('用户取消授权', 'warning');
-                                dom.bridgeBtn.disabled = false;
-                                dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
-                                state.isProcessing = false;
-                                return;
-                            } else {
-                                // 其他错误，尝试继续（可能不需要授权）
-                                console.warn('授权失败，继续尝试交易:', approveError);
+                        if (needApprove) {
+                            showToast('授权代币...', 'info');
+                            try {
+                                const approveTx = await tokenContract.approve(oAppAddr, ethers.MaxUint256);
+                                await approveTx.wait();
+                                showToast('授权成功', 'success');
+                            } catch (approveError) {
+                                let errMsg = approveError.message || '';
+                                if (approveError.code === 4001 || approveError.code === 'ACTION_REJECTED' ||
+                                    errMsg.includes('user rejected') || errMsg.includes('denied') ||
+                                    errMsg.includes('User denied')) {
+                                    showToast('用户取消授权', 'warning');
+                                    dom.bridgeBtn.disabled = false;
+                                    dom.bridgeBtn.innerHTML = '<i class="fas fa-arrows-spin"></i> 跨链桥接';
+                                    state.isProcessing = false;
+                                    return;
+                                } else {
+                                    // 其他错误，继续尝试（可能不需要授权）
+                                    console.warn('授权失败，继续尝试交易:', approveError);
+                                }
                             }
                         }
+                    } else {
+                        // 非以太坊链，跳过授权
+                        console.log('[bridge] 源链非以太坊，跳过授权');
                     }
 
                     // 3. 估算费用并检查 Gas
@@ -2632,6 +2615,7 @@
 
                     dom.amountInput.value = '';
                     clearAddressInput();
+                    // 刷新源链余额
                     await loadBalances();
                     dom.targetEstimateInput.value = '—';
                 } catch (error) {
@@ -2747,7 +2731,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（Tron 唤醒彻底优化）');
+                console.log('🐕 Dogz Bridge 已启动（Tron唤醒修复+授权优化+余额刷新）');
             }
 
             if (document.readyState === 'loading') {
