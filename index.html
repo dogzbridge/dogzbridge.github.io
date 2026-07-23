@@ -1375,14 +1375,19 @@
                 return addr.slice(0, 6) + '...' + addr.slice(-4);
             }
 
+            // ★★★ 修改：精确显示余额，去掉末尾零，保留所有非零小数位 ★★★
             function formatBalance(bn, decimals = 18) {
                 if (!bn) return '0.00';
                 try {
                     const val = ethers.formatUnits(bn, decimals);
-                    const num = parseFloat(val);
-                    if (isNaN(num)) return '0.00';
-                    if (num < 0.0001 && num > 0) return '<0.0001';
-                    return num.toFixed(4);
+                    // 去除末尾的零，如果小数点后全为零则去掉小数点
+                    let str = val;
+                    if (str.includes('.')) {
+                        str = str.replace(/\.?0+$/, '');
+                    }
+                    // 如果字符串为空或只剩小数点，返回 "0"
+                    if (str === '' || str === '.') str = '0';
+                    return str;
                 } catch { return '0.00'; }
             }
 
@@ -1552,7 +1557,6 @@
 
             // ======================= 钱包连接（使用旧版可靠唤醒方式） =======================
             async function connectWallet(silent = false, force = false) {
-                // 如果已连接且不强制，直接返回
                 if (state.isConnected && !force) return;
 
                 let targetWalletType = state.walletType;
@@ -1626,21 +1630,19 @@
                     return;
                 }
 
-                // ---------- Tron（使用旧版简洁可靠的唤醒方式） ----------
+                // ---------- Tron ----------
                 if (targetWalletType === 'tron' || (!state.isConnected && isTronChain(state.sourceEid))) {
                     if (typeof window.tronWeb === 'undefined' && typeof window.tronLink === 'undefined') {
                         if (!silent) showToast('请安装 TronLink 钱包', 'error');
                         return;
                     }
                     try {
-                        // ★★★ 旧版核心逻辑：直接使用 window.tronLink.request 唤醒 ★★★
                         let tronWeb = window.tronWeb;
                         if (!tronWeb && window.tronLink) {
                             await window.tronLink.request({ method: 'tron_requestAccounts' });
                             tronWeb = window.tronLink.tronWeb;
                         }
                         if (!tronWeb) throw new Error('TronWeb 未初始化');
-
                         const address = tronWeb.defaultAddress.base58;
                         if (!address) throw new Error('未能获取 Tron 地址');
 
@@ -1659,7 +1661,6 @@
                             if (other) state.targetEid = other.eid;
                         }
 
-                        // ★★★ 绑定 Tron 账户变化监听 (多种方式) ★★★
                         if (window.tronLink && typeof window.tronLink.on === 'function') {
                             if (state._tronAccountsHandler) {
                                 try { window.tronLink.off('accountsChanged', state._tronAccountsHandler); } catch (e) {}
@@ -2650,7 +2651,7 @@
                     }).catch(() => {});
                 }
 
-                console.log('🐕 Dogz Bridge 已启动（Tron唤醒使用旧版可靠逻辑）');
+                console.log('🐕 Dogz Bridge 已启动（余额显示精确去零）');
             }
 
             if (document.readyState === 'loading') {
